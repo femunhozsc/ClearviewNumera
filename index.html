@@ -1814,7 +1814,7 @@ function renderMySalesChart(data) {
             datasets: [{
                 label: 'Qtd Vendida',
                 data: data.map(d => d[1]),
-                backgroundColor: '#ffcc00',
+                backgroundColor: '#0D47A1',
                 borderRadius: 4
             }]
         },
@@ -1823,8 +1823,8 @@ function renderMySalesChart(data) {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#888' } },
-                x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+                y: { beginAtZero: true, grid: { color: '#e8eaf0' }, ticks: { color: '#5f6368' } },
+                x: { grid: { display: false }, ticks: { color: '#5f6368', font: { size: 10 } } }
             }
         }
     });
