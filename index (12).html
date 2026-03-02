@@ -831,14 +831,27 @@
    6. Vá em Project Settings → General → Your apps → Add web app
    7. Copie o firebaseConfig gerado e cole abaixo
 ============================================================ */
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_PROJETO.firebaseapp.com",
-    projectId: "SEU_PROJETO_ID",
-    storageBucket: "SEU_PROJETO.appspot.com",
-    messagingSenderId: "SEU_SENDER_ID",
-    appId: "SEU_APP_ID"
+  apiKey: "AIzaSyAMIV3mf_zkVLiDXY-o-s6azswMGTERewk",
+  authDomain: "clearviewnumera.firebaseapp.com",
+  projectId: "clearviewnumera",
+  storageBucket: "clearviewnumera.firebasestorage.app",
+  messagingSenderId: "310977771451",
+  appId: "1:310977771451:web:5244861e0130f0c820369e",
+  measurementId: "G-M0B09H9DVP"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
