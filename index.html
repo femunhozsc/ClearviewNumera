@@ -14,6 +14,7 @@
     <!-- PDF Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -268,15 +269,17 @@
 
                 <!-- Stats pessoais -->
                 <div class="stats-row" id="homeStats">
-                    <div class="stat-card">
+                    <div class="stat-card" onclick="openMySalesDashboard()" style="cursor:pointer">
                         <div class="stat-card-label"><i class="fa-solid fa-circle-user"></i> Minhas vendas hoje</div>
                         <div class="stat-card-value success" id="myDaySales">R$ 0,00</div>
                         <div class="stat-card-sub" id="myDayCount">0 vendas</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-card-label"><i class="fa-solid fa-calendar-week"></i> Minha semana</div>
-                        <div class="stat-card-value" id="myWeekSales">R$ 0,00</div>
-                        <div class="stat-card-sub" id="myWeekCount">0 vendas</div>
+                    <div class="stat-card" id="myStatsCard" style="position:relative; overflow:hidden; touch-action:none; user-select:none;">
+                        <div id="myStatsContent" class="stat-card-content">
+                            <div class="stat-card-label"><i class="fa-regular fa-calendar"></i> Meu mês</div>
+                            <div class="stat-card-value" id="myDynamicSales">R$ 0,00</div>
+                            <div class="stat-card-sub" id="myDynamicCount">0 vendas</div>
+                        </div>
                     </div>
                     <div class="stat-card wide accent">
                         <div>
@@ -302,6 +305,14 @@
                 <div class="section-label">
                     <span>Atividade recente</span>
                     <button class="section-label-btn" onclick="loadFeed(true)"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <div class="feed-filters">
+                    <button class="feed-filter-btn active" onclick="setFeedFilter('24h', this)">24h</button>
+                    <button class="feed-filter-btn" onclick="setFeedFilter('7d', this)">7 dias</button>
+                    <button class="feed-filter-btn" onclick="setFeedFilter('30d', this)">1 mês</button>
+                    <button class="feed-filter-btn" onclick="setFeedFilter('3m', this)">3 meses</button>
+                    <button class="feed-filter-btn" onclick="setFeedFilter('1y', this)">1 ano</button>
+                    <button class="feed-filter-btn" onclick="setFeedFilter('max', this)">Tudo</button>
                 </div>
                 <div class="feed-list" id="feedList">
                     <div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>
@@ -483,6 +494,51 @@
         <div class="members-list" id="membersList">
             <div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>
         </div>
+    </div>
+</div>
+
+<!-- ============================= PAGE: MEU DASHBOARD ============================= -->
+<div id="page-mysales" class="page-slide">
+    <div class="page-slide-header">
+        <button class="page-slide-back" onclick="closeMySalesPage()"><i class="fa-solid fa-arrow-left"></i></button>
+        <span class="page-slide-title">Meu Desempenho</span>
+    </div>
+    <div class="page-slide-body">
+        <!-- Filters -->
+        <div class="feed-filters" style="margin-bottom:12px">
+            <button class="feed-filter-btn active" onclick="filterMySales('this_month', this)">Este Mês</button>
+            <button class="feed-filter-btn" onclick="filterMySales('last_month', this)">Mês Passado</button>
+            <button class="feed-filter-btn" onclick="filterMySales('3m', this)">3 Meses</button>
+            <button class="feed-filter-btn" onclick="filterMySales('1y', this)">1 Ano</button>
+            <button class="feed-filter-btn" onclick="filterMySales('all', this)">Tudo</button>
+            <button class="feed-filter-btn" onclick="filterMySales('custom', this)">📅 Personalizado</button>
+        </div>
+        <div id="customSalesDateRange" style="display:none; gap:8px; margin-bottom:16px; align-items:flex-end; background:var(--card-bg); padding:12px; border-radius:12px; border:1px solid var(--card-border);">
+            <div style="flex:1"><label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px">De</label><input type="date" id="mySalesStart" class="form-input" style="padding:8px"></div>
+            <div style="flex:1"><label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:4px">Até</label><input type="date" id="mySalesEnd" class="form-input" style="padding:8px"></div>
+            <button class="btn-primary" style="width:auto;padding:10px 14px;margin:0" onclick="applyCustomSalesFilter()"><i class="fa-solid fa-check"></i></button>
+        </div>
+        <!-- Summary -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-card-label">Total Vendido (Período)</div>
+                <div class="stat-card-value success" id="dashMyTotal">R$ 0,00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-label">Total Vendas</div>
+                <div class="stat-card-value" id="dashMyCount">0</div>
+            </div>
+        </div>
+        <!-- Chart -->
+        <div class="section-card">
+            <div class="section-card-title">Produtos Mais Vendidos</div>
+            <div style="position:relative; height:250px; width:100%">
+                <canvas id="mySalesChart"></canvas>
+            </div>
+        </div>
+        <!-- History -->
+        <div class="section-label">Histórico de Vendas</div>
+        <div class="feed-list" id="dashMyHistory"></div>
     </div>
 </div>
 
@@ -915,6 +971,12 @@ let activeProductCat = null;
 let activeStockCat = null;
 let deferredPrompt = null; // PWA Install Prompt
 let appDate = new Date(); // Data global do app
+let feedFilter = '24h';
+let mySalesChartInstance = null;
+// Stats Card Logic
+let myStatsView = 'month'; // month, week, year
+let myStatsCache = { month: {v:0, c:0}, week: {v:0, c:0}, year: {v:0, c:0} };
+let myStatsInterval = null;
 
 /* ============================================================
    UTILS
@@ -1017,6 +1079,13 @@ function isThisMonth(date) {
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
 }
+function isThisYear(date) {
+    if (!date) return false;
+    const d = date.toDate ? date.toDate() : new Date(date);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear();
+}
+
 function getRoleBadge(role) {
     const roles = {
         admin: { label: 'Admin', cls: 'admin' },
@@ -1322,12 +1391,23 @@ async function loadHomeData() {
         const mySales = sales.filter(s => s.sellerId === currentUser.uid);
         const myToday = mySales.filter(s => isToday(s.createdAt));
         const myWeek = mySales.filter(s => isThisWeek(s.createdAt));
+        const myMonth = mySales.filter(s => isThisMonth(s.createdAt));
+        const myYear = mySales.filter(s => isThisYear(s.createdAt));
+
         const myTodayTotal = myToday.reduce((a, s) => a + (s.total || 0), 0);
-        const myWeekTotal = myWeek.reduce((a, s) => a + (s.total || 0), 0);
+        
+        // Cache stats for the dynamic card
+        myStatsCache.week = { v: myWeek.reduce((a, s) => a + (s.total || 0), 0), c: myWeek.length };
+        myStatsCache.month = { v: myMonth.reduce((a, s) => a + (s.total || 0), 0), c: myMonth.length };
+        myStatsCache.year = { v: myYear.reduce((a, s) => a + (s.total || 0), 0), c: myYear.length };
+
         document.getElementById('myDaySales').textContent = formatBRL(myTodayTotal);
         document.getElementById('myDayCount').textContent = `${myToday.length} venda${myToday.length !== 1 ? 's' : ''}`;
-        document.getElementById('myWeekSales').textContent = formatBRL(myWeekTotal);
-        document.getElementById('myWeekCount').textContent = `${myWeek.length} venda${myWeek.length !== 1 ? 's' : ''}`;
+        
+        // Initialize dynamic card
+        initMyStatsCard();
+        updateMyStatsCardUI(false); // Update without animation first time
+
         // Group stats
         const groupToday = sales.filter(s => isToday(s.createdAt));
         const groupMonth = sales.filter(s => isThisMonth(s.createdAt));
@@ -1338,6 +1418,100 @@ async function loadHomeData() {
     } catch(e) { console.error(e); }
     // Feed real-time
     loadFeed();
+}
+
+/* ============================================================
+   DYNAMIC STATS CARD (Month/Week/Year)
+============================================================ */
+function initMyStatsCard() {
+    const card = document.getElementById('myStatsCard');
+    if (card.dataset.init === 'true') return; // Prevent double init
+    card.dataset.init = 'true';
+
+    // Swipe Logic
+    let startY = 0;
+    
+    card.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive: true});
+    card.addEventListener('touchend', e => {
+        const endY = e.changedTouches[0].clientY;
+        const diff = startY - endY;
+        if (diff > 30) { // Drag Up
+            cycleMyStatsView();
+            resetStatsTimer(); // Reset timer on interaction
+        }
+    }, {passive: true});
+
+    // Mouse support for desktop testing
+    card.addEventListener('mousedown', e => { startY = e.clientY; });
+    card.addEventListener('mouseup', e => {
+        if (startY - e.clientY > 30) {
+            cycleMyStatsView();
+            resetStatsTimer();
+        }
+    });
+
+    // Auto Rotate Timer
+    startStatsTimer();
+}
+
+function startStatsTimer() {
+    if (myStatsInterval) clearInterval(myStatsInterval);
+    myStatsInterval = setInterval(() => {
+        // Só rotaciona entre Mês e Semana automaticamente
+        if (myStatsView === 'month') {
+            myStatsView = 'week';
+            updateMyStatsCardUI(true);
+        } else if (myStatsView === 'week') {
+            myStatsView = 'month';
+            updateMyStatsCardUI(true);
+        }
+        // Se estiver em 'year', não faz nada (conforme pedido)
+    }, 30000); // 30 segundos
+}
+
+function resetStatsTimer() {
+    clearInterval(myStatsInterval);
+    startStatsTimer();
+}
+
+function cycleMyStatsView() {
+    // Cycle: Month -> Week -> Year -> Month
+    if (myStatsView === 'month') myStatsView = 'week';
+    else if (myStatsView === 'week') myStatsView = 'year';
+    else myStatsView = 'month';
+    
+    updateMyStatsCardUI(true);
+}
+
+function updateMyStatsCardUI(animate) {
+    const content = document.getElementById('myStatsContent');
+    const label = content.querySelector('.stat-card-label');
+    const val = document.getElementById('myDynamicSales');
+    const sub = document.getElementById('myDynamicCount');
+    
+    const data = myStatsCache[myStatsView];
+    const labels = { month: 'Meu mês', week: 'Minha semana', year: 'Meu ano' };
+    const icons = { month: 'fa-calendar', week: 'fa-calendar-week', year: 'fa-calendar-days' };
+
+    const render = () => {
+        label.innerHTML = `<i class="fa-regular ${icons[myStatsView]}"></i> ${labels[myStatsView]}`;
+        val.textContent = formatBRL(data.v);
+        sub.textContent = `${data.c} venda${data.c !== 1 ? 's' : ''}`;
+    };
+
+    if (animate) {
+        content.classList.add('slide-out');
+        setTimeout(() => {
+            render();
+            content.classList.remove('slide-out');
+            content.classList.add('slide-in');
+            // Force reflow
+            void content.offsetWidth;
+            content.classList.remove('slide-in');
+        }, 400);
+    } else {
+        render();
+    }
 }
 
 function renderRanking(todaySales) {
@@ -1364,21 +1538,77 @@ function renderRanking(todaySales) {
     `).join('');
 }
 
+function setFeedFilter(filter, btn) {
+    feedFilter = filter;
+    document.querySelectorAll('.feed-filter-btn').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    loadFeed(true);
+}
+
 function loadFeed(forceRefresh = false) {
     if (!currentGroupId) return;
     if (feedUnsubscribe && !forceRefresh) return;
     if (feedUnsubscribe) feedUnsubscribe();
     const list = document.getElementById('feedList');
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>';
-    feedUnsubscribe = db.collection('groups').doc(currentGroupId).collection('feed')
-        .orderBy('createdAt', 'desc').limit(30)
-        .onSnapshot(snap => {
+    
+    // Calcular data de corte
+    let startDate = new Date();
+    if (feedFilter === '24h') startDate.setHours(startDate.getHours() - 24);
+    else if (feedFilter === '7d') startDate.setDate(startDate.getDate() - 7);
+    else if (feedFilter === '30d') startDate.setDate(startDate.getDate() - 30);
+    else if (feedFilter === '3m') startDate.setMonth(startDate.getMonth() - 3);
+    else if (feedFilter === '1y') startDate.setFullYear(startDate.getFullYear() - 1);
+    else startDate = new Date(2000, 0, 1); // Max
+
+    let query = db.collection('groups').doc(currentGroupId).collection('feed')
+        .where('createdAt', '>=', startDate)
+        .orderBy('createdAt', 'desc');
+        
+    if (feedFilter === '24h') query = query.limit(50);
+    else query = query.limit(200);
+
+    feedUnsubscribe = query.onSnapshot(snap => {
             if (snap.empty) {
                 list.innerHTML = '<div class="feed-empty"><i class="fa-solid fa-wave-square"></i>Nenhuma atividade ainda. Registre uma venda!</div>';
                 return;
             }
-            list.innerHTML = snap.docs.map(d => renderFeedItem(d.data())).join('');
+            
+            const docs = snap.docs.map(d => d.data());
+            let html = '';
+            let lastHeader = '';
+
+            docs.forEach(d => {
+                const date = d.createdAt.toDate();
+                let header = '';
+
+                // Lógica de agrupamento
+                if (feedFilter === '30d' || feedFilter === '7d' || feedFilter === '24h') {
+                    // Agrupar semanalmente (ou diariamente se for muito recente, mas o prompt pede semanalmente abaixo de 1 mes)
+                    // Vamos usar Semana do Ano para agrupar
+                    const onejan = new Date(date.getFullYear(), 0, 1);
+                    const weekNum = Math.ceil((((date - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+                    header = `Semana ${weekNum} · ${date.getFullYear()}`;
+                    
+                    // Se for 24h ou 7d, talvez seja melhor mostrar "Hoje", "Ontem" para ficar mais natural, 
+                    // mas seguindo o prompt "semanalmente abaixo de 1 mes":
+                    if (feedFilter === '24h') header = "Últimas 24h";
+                } else {
+                    // Agrupar mensalmente acima de 1 mês
+                    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                    header = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+                }
+
+                if (header !== lastHeader) {
+                    html += `<div class="feed-group-header">${header}</div>`;
+                    lastHeader = header;
+                }
+                html += renderFeedItem(d);
+            });
+
+            list.innerHTML = html;
         }, err => {
+            console.error(err);
             list.innerHTML = '<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>Erro ao carregar atividades</div>';
         });
 }
@@ -1416,6 +1646,192 @@ async function addToFeed(type, description, extra = {}) {
         createdAt: firebase.firestore.Timestamp.fromDate(appDate), // Usa data selecionada
         ...extra
     });
+}
+
+/* ============================================================
+   MY SALES DASHBOARD
+============================================================ */
+function openMySalesDashboard() {
+    document.getElementById('page-mysales').classList.add('active');
+    // Reset filter to this month by default
+    const btns = document.querySelectorAll('#page-mysales .feed-filter-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    if(btns[0]) btns[0].classList.add('active');
+    document.getElementById('customSalesDateRange').style.display = 'none';
+    
+    filterMySales('this_month');
+}
+
+let mySalesFilterType = 'this_month';
+
+function filterMySales(type, btn) {
+    mySalesFilterType = type;
+    if (btn) {
+        document.querySelectorAll('#page-mysales .feed-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    
+    const div = document.getElementById('customSalesDateRange');
+    if (type === 'custom') {
+        div.style.display = 'flex';
+        if (!document.getElementById('mySalesStart').value) {
+            const now = new Date();
+            document.getElementById('mySalesStart').value = now.toISOString().split('T')[0];
+            document.getElementById('mySalesEnd').value = now.toISOString().split('T')[0];
+        }
+        return;
+    }
+    div.style.display = 'none';
+
+    const now = new Date();
+    let start, end;
+
+    if (type === 'this_month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    } else if (type === 'last_month') {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    } else if (type === '3m') {
+        start = new Date();
+        start.setMonth(start.getMonth() - 3);
+        end = now;
+    } else if (type === '1y') {
+        start = new Date();
+        start.setFullYear(start.getFullYear() - 1);
+        end = now;
+    } else if (type === 'all') {
+        start = new Date(2020, 0, 1);
+        end = now;
+    }
+    loadMySalesData(start, end);
+}
+
+function applyCustomSalesFilter() {
+    const s = document.getElementById('mySalesStart').value;
+    const e = document.getElementById('mySalesEnd').value;
+    if (!s || !e) return showToast('Selecione as datas', 'error');
+    // Ajustar fuso
+    const start = new Date(s + 'T00:00:00');
+    const end = new Date(e + 'T23:59:59');
+    loadMySalesData(start, end);
+}
+
+async function loadMySalesData(start, end) {
+    const list = document.getElementById('dashMyHistory');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando dados...</div>';
+    
+    try {
+        let sales = [];
+        try {
+            // Tentativa 1: Busca otimizada (requer índice composto sellerId + createdAt)
+            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+                .where('sellerId', '==', currentUser.uid)
+                .where('createdAt', '>=', start)
+                .where('createdAt', '<=', end)
+                .orderBy('createdAt', 'desc')
+                .get();
+            sales = snap.docs.map(d => d.data());
+        } catch (errIndex) {
+            console.warn("Índice não encontrado, usando fallback no cliente...", errIndex);
+            // Tentativa 2: Fallback (sem índice composto)
+            // Busca vendas do usuário (limite seguro) e filtra no JS
+            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+                .where('sellerId', '==', currentUser.uid)
+                .limit(1000)
+                .get();
+            
+            sales = snap.docs.map(d => d.data())
+                .filter(s => {
+                    const d = s.createdAt.toDate();
+                    return d >= start && d <= end;
+                })
+                .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+        }
+        
+        // Totais
+        const totalVal = sales.reduce((a, s) => a + (s.total || 0), 0);
+        document.getElementById('dashMyTotal').textContent = formatBRL(totalVal);
+        document.getElementById('dashMyCount').textContent = sales.length;
+        
+        // Atualizar label do período
+        const labelTotal = document.querySelector('#page-mysales .stat-card-label');
+        if(labelTotal) {
+            if (mySalesFilterType === 'custom') labelTotal.textContent = 'Total Vendido (Personalizado)';
+            else if (mySalesFilterType === 'all') labelTotal.textContent = 'Total Vendido (Histórico)';
+            else labelTotal.textContent = 'Total Vendido (Período)';
+        }
+
+        // Dados para o gráfico (Top Produtos)
+        const productStats = {};
+        sales.forEach(s => {
+            if (s.items) {
+                s.items.forEach(i => {
+                    if (!productStats[i.productName]) productStats[i.productName] = 0;
+                    productStats[i.productName] += (i.qty || 1);
+                });
+            }
+        });
+
+        // Ordenar e pegar top 5
+        const sortedProds = Object.entries(productStats)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+
+        renderMySalesChart(sortedProds);
+
+        // Histórico
+        if (sales.length === 0) {
+            list.innerHTML = '<div class="feed-empty">Nenhuma venda registrada.</div>';
+        } else {
+            list.innerHTML = sales.map(s => `
+                <div class="feed-item">
+                    <div class="feed-icon sale"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <div class="feed-body">
+                        <div class="feed-who">${s.items ? s.items.length + ' itens' : 'Venda'}</div>
+                        <div class="feed-desc">${s.items ? s.items.map(i=>i.productName).join(', ') : ''}</div>
+                        <div class="feed-meta"><i class="fa-regular fa-clock"></i> ${s.createdAt.toDate().toLocaleDateString('pt-BR')} às ${s.createdAt.toDate().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                    <div class="feed-amount">${formatBRL(s.total)}</div>
+                </div>
+            `).join('');
+        }
+
+    } catch(e) {
+        console.error(e);
+        list.innerHTML = '<div class="feed-empty">Erro ao carregar dados: ' + e.message + '</div>';
+    }
+}
+
+function renderMySalesChart(data) {
+    const ctx = document.getElementById('mySalesChart').getContext('2d');
+    if (mySalesChartInstance) mySalesChartInstance.destroy();
+
+    mySalesChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d[0]),
+            datasets: [{
+                label: 'Qtd Vendida',
+                data: data.map(d => d[1]),
+                backgroundColor: '#ffcc00',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#888' } },
+                x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+function closeMySalesPage() {
+    document.getElementById('page-mysales').classList.remove('active');
 }
 
 /* ============================================================
