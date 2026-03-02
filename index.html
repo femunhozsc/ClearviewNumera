@@ -257,7 +257,7 @@
             <div class="page-inner">
                 <div class="home-greeting">
                     <!-- Data Picker Global -->
-                    <div class="home-greeting-sub" style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="openDatePicker()">
+                    <div class="home-greeting-sub" onclick="openDatePicker()">
                         <i class="fa-regular fa-calendar"></i> <span id="globalDateDisplay">Hoje</span> <i class="fa-solid fa-chevron-down" style="font-size:0.6rem"></i>
                     </div>
                     <div class="home-greeting-name" id="homeGreetName">Bem-vindo(a)</div>
@@ -1378,7 +1378,7 @@ async function loadHomeData() {
     if (!currentGroupId) return;
     // Atualizar saudações
     const nick = currentUserData.nickname || currentUserData.name;
-    document.getElementById('homeGreetName').textContent = nick;
+    document.getElementById('homeGreetName').textContent = `Olá, ${nick}`;
     document.getElementById('homeGroupName').textContent = currentGroup ? currentGroup.name : '—';
     document.getElementById('splashNome').textContent = nick;
     updateDateDisplay();
