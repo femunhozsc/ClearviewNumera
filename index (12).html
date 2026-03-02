@@ -1,0 +1,2043 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#050505">
+    <title>Clearview Numera</title>
+    <link rel="apple-touch-icon" sizes="512x512" href="app-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================= SPLASH ============================= -->
+<div id="splash">
+    <div class="splash-inner">
+        <div class="splash-logo"><img src="logo.png" alt="Clearview"></div>
+        <div class="splash-greeting">
+            <div class="splash-ola">Bem-vindo(a)</div>
+            <div class="splash-nome" id="splashNome">Numera</div>
+            <div class="splash-divider"></div>
+        </div>
+    </div>
+    <div class="splash-tagline">Gestão empresarial inteligente</div>
+</div>
+
+<!-- ============================= AUTH SCREEN ============================= -->
+<div id="auth-screen" style="display:none">
+    <div class="auth-bg">
+        <div class="auth-glow"></div>
+    </div>
+    <div class="auth-header">
+        <img src="logo.png" alt="Clearview" class="auth-logo-img">
+        <div class="auth-brand-tag">Numera · Gestão Empresarial</div>
+    </div>
+    <div class="auth-panels-outer">
+        <div class="auth-panels-track" id="authPanelsTrack">
+
+            <!-- PANEL 0: Main -->
+            <div class="auth-panel" id="auth-main">
+                <div class="auth-panel-inner">
+                    <h1 class="auth-title">Olá, gestor(a)</h1>
+                    <p class="auth-subtitle">Controle vendas, estoque e equipe em um só lugar.</p>
+                    <div class="auth-divider-line"></div>
+                    <button class="btn-auth-v2 btn-auth-outline" onclick="showLoginPanel()">
+                        <i class="fa-regular fa-envelope"></i> Entrar com E-mail
+                    </button>
+                    <button class="btn-auth-v2 btn-auth-gold" onclick="showRegisterPanel()">
+                        <i class="fa-solid fa-building"></i> Criar Conta
+                    </button>
+                    <button class="btn-auth-v2 btn-auth-google-v2" onclick="authGoogle()">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="17" alt="G"> Continuar com Google
+                    </button>
+                    <p class="auth-legal">Ao continuar, você aceita os <span class="auth-link">Termos de Uso</span></p>
+                </div>
+            </div>
+
+            <!-- PANEL 1: Login -->
+            <div class="auth-panel" id="auth-login">
+                <div class="auth-panel-inner">
+                    <button class="auth-back-btn" onclick="showMainAuth()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h1 class="auth-title">Entrar</h1>
+                    <p class="auth-subtitle">Acesse sua conta Clearview Numera</p>
+                    <div class="auth-field-group">
+                        <div class="auth-field">
+                            <label class="auth-field-label">E-mail</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-regular fa-envelope auth-field-icon"></i>
+                                <input type="email" id="loginEmail" class="auth-field-input" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()">
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label class="auth-field-label">Senha</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-solid fa-lock auth-field-icon"></i>
+                                <input type="password" id="loginPass" class="auth-field-input" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+                                <button class="auth-field-eye" onclick="togglePass('loginPass',this)"><i class="fa-regular fa-eye"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-auth-v2 btn-auth-gold" id="btnLoginAction" onclick="doLogin()">
+                        Entrar <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>
+                    </button>
+                    <p class="auth-switch-text">Não tem conta? <span class="auth-link" onclick="showRegisterPanel()">Cadastre-se</span></p>
+                </div>
+            </div>
+
+            <!-- PANEL 2: Register -->
+            <div class="auth-panel" id="auth-register">
+                <div class="auth-panel-inner">
+                    <button class="auth-back-btn" onclick="showMainAuth()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h1 class="auth-title">Criar Conta</h1>
+                    <p class="auth-subtitle">Você vai entrar ou criar um grupo depois</p>
+                    <div class="auth-field-group auth-field-group-scroll">
+                        <div class="auth-field-row">
+                            <div class="auth-field">
+                                <label class="auth-field-label">Nome</label>
+                                <div class="auth-field-wrap">
+                                    <i class="fa-regular fa-user auth-field-icon"></i>
+                                    <input type="text" id="regName" class="auth-field-input capitalize" placeholder="João">
+                                </div>
+                            </div>
+                            <div class="auth-field">
+                                <label class="auth-field-label">Sobrenome</label>
+                                <div class="auth-field-wrap">
+                                    <i class="fa-regular fa-user auth-field-icon"></i>
+                                    <input type="text" id="regSurname" class="auth-field-input capitalize" placeholder="Silva">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label class="auth-field-label">Apelido (como quer ser chamado)</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-solid fa-tag auth-field-icon"></i>
+                                <input type="text" id="regNickname" class="auth-field-input" placeholder="João, JC, Jão...">
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label class="auth-field-label">CPF</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-regular fa-id-card auth-field-icon"></i>
+                                <input type="text" id="regCpf" class="auth-field-input" placeholder="000.000.000-00" oninput="maskCpf(this)" maxlength="14">
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label class="auth-field-label">Telefone</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-solid fa-mobile-screen auth-field-icon"></i>
+                                <input type="tel" id="regPhone" class="auth-field-input" placeholder="(11) 99999-9999" oninput="maskPhone(this)" maxlength="15">
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label class="auth-field-label">Cargo / Função</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-solid fa-briefcase auth-field-icon"></i>
+                                <input type="text" id="regCargo" class="auth-field-input" placeholder="Vendedor, Gerente, Diretor...">
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label class="auth-field-label">E-mail</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-regular fa-envelope auth-field-icon"></i>
+                                <input type="email" id="regEmail" class="auth-field-input" placeholder="seu@email.com" autocomplete="email">
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label class="auth-field-label">Senha</label>
+                            <div class="auth-field-wrap">
+                                <i class="fa-solid fa-lock auth-field-icon"></i>
+                                <input type="password" id="regPass" class="auth-field-input" placeholder="••••••••" autocomplete="new-password">
+                                <button class="auth-field-eye" onclick="togglePass('regPass',this)"><i class="fa-regular fa-eye"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-auth-v2 btn-auth-gold" id="btnRegAction" onclick="doRegister()">
+                        Criar Conta <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>
+                    </button>
+                    <p class="auth-switch-text">Já tem conta? <span class="auth-link" onclick="showLoginPanel()">Entrar</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= GROUP SCREEN ============================= -->
+<div id="group-screen">
+    <div class="group-screen-inner">
+        <div class="group-header">
+            <img src="logo.png" alt="Clearview">
+            <h1 class="group-title">Seu espaço de trabalho</h1>
+            <p class="group-subtitle">Crie um grupo para sua empresa ou entre em um já existente com o código de convite.</p>
+        </div>
+
+        <!-- Opções -->
+        <div class="group-options" id="groupOptions">
+            <div class="group-option-card" onclick="showGroupCreate()">
+                <div class="group-option-icon"><i class="fa-solid fa-building-user"></i></div>
+                <div class="group-option-text">
+                    <h3>Criar Grupo</h3>
+                    <p>Crie o espaço da sua empresa e convide sua equipe</p>
+                </div>
+            </div>
+            <div class="group-option-card" onclick="showGroupJoin()">
+                <div class="group-option-icon"><i class="fa-solid fa-door-open"></i></div>
+                <div class="group-option-text">
+                    <h3>Entrar em um Grupo</h3>
+                    <p>Use o código de convite enviado pelo administrador</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form: Criar -->
+        <div class="group-form-section" id="groupCreateForm">
+            <button class="group-back-link" onclick="showGroupOptions()">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+            <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:6px;margin-top:12px;">Novo Grupo</h2>
+            <p style="font-size:0.8rem;color:var(--text-sec);margin-bottom:22px;">Você será o administrador deste grupo</p>
+            <div class="group-field">
+                <label>Nome da Empresa / Grupo</label>
+                <input type="text" id="groupName" placeholder="Ex: Loja do João, Tech Solutions...">
+            </div>
+            <div class="group-field">
+                <label>Segmento</label>
+                <input type="text" id="groupSegmento" placeholder="Ex: Varejo, Tecnologia, Alimentação...">
+            </div>
+            <button class="btn-primary" onclick="createGroup()" id="btnCreateGroup">
+                Criar Grupo <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>
+            </button>
+        </div>
+
+        <!-- Form: Entrar -->
+        <div class="group-form-section" id="groupJoinForm">
+            <button class="group-back-link" onclick="showGroupOptions()">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+            <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:6px;margin-top:12px;">Entrar no Grupo</h2>
+            <p style="font-size:0.8rem;color:var(--text-sec);margin-bottom:22px;">Solicite o código ao administrador da sua empresa</p>
+            <div class="group-field">
+                <label>Código de Convite</label>
+                <input type="text" id="joinCode" placeholder="EX: ABC123" style="text-transform:uppercase;letter-spacing:4px;font-size:1.2rem;text-align:center;" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <button class="btn-primary" onclick="joinGroup()" id="btnJoinGroup">
+                Entrar no Grupo <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= MAIN APP ============================= -->
+<div id="app">
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <img src="logo.png" alt="Clearview" class="logo-img">
+        <div class="navbar-right">
+            <span class="navbar-group-name" id="navGroupName"></span>
+            <div class="sync-icon" id="syncIcon" style="display:none">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path class="spin" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" d="M12 2a10 10 0 0 1 7.39 16.74M12 22a10 10 0 0 1-7.39-16.74M2.05 11a10 10 0 0 1 .55-3M22 12a10 10 0 0 1-.55 3"/></svg>
+            </div>
+            <button class="navbar-btn" onclick="openSideNav()"><i class="fa-solid fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="app-content">
+
+        <!-- ===== TAB: HOME ===== -->
+        <div id="tab-home" class="tab-page active">
+            <div class="page-inner">
+                <div class="home-greeting">
+                    <div class="home-greeting-sub">Olá,</div>
+                    <div class="home-greeting-name" id="homeGreetName">Bem-vindo(a)</div>
+                    <div class="home-greeting-group">
+                        <i class="fa-solid fa-building"></i>
+                        <span id="homeGroupName">—</span>
+                    </div>
+                </div>
+
+                <!-- Stats pessoais -->
+                <div class="stats-row" id="homeStats">
+                    <div class="stat-card">
+                        <div class="stat-card-label"><i class="fa-solid fa-circle-user"></i> Minhas vendas hoje</div>
+                        <div class="stat-card-value success" id="myDaySales">R$ 0,00</div>
+                        <div class="stat-card-sub" id="myDayCount">0 vendas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label"><i class="fa-solid fa-calendar-week"></i> Minha semana</div>
+                        <div class="stat-card-value" id="myWeekSales">R$ 0,00</div>
+                        <div class="stat-card-sub" id="myWeekCount">0 vendas</div>
+                    </div>
+                    <div class="stat-card wide accent">
+                        <div>
+                            <div class="stat-card-label"><i class="fa-solid fa-building"></i> Grupo hoje</div>
+                            <div class="stat-card-value" id="groupDaySales">R$ 0,00</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div class="stat-card-label">Este mês</div>
+                            <div class="stat-card-value" id="groupMonthSales">R$ 0,00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top vendedores -->
+                <div class="section-card" id="topSellersSection" style="display:none">
+                    <div class="section-card-title">
+                        <span>🏆 Ranking hoje</span>
+                    </div>
+                    <div class="sellers-row" id="sellersList"></div>
+                </div>
+
+                <!-- Feed -->
+                <div class="section-label">
+                    <span>Atividade recente</span>
+                    <button class="section-label-btn" onclick="loadFeed(true)"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <div class="feed-list" id="feedList">
+                    <div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>
+                </div>
+
+                <footer>Clearview Numera · Gestão Empresarial</footer>
+            </div>
+        </div>
+
+        <!-- ===== TAB: PRODUTOS ===== -->
+        <div id="tab-products" class="tab-page">
+            <div class="page-inner">
+                <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Produtos</h2>
+                <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Catálogo de produtos por categoria</p>
+
+                <!-- Categorias scroll -->
+                <div class="cat-scroll" id="productCatScroll">
+                    <div class="loading-state" style="padding:8px 0"><div class="loading-spinner"></div></div>
+                </div>
+
+                <!-- Lista de produtos -->
+                <div id="productsList">
+                    <div class="empty-state">
+                        <i class="fa-solid fa-box-open"></i>
+                        <h3>Nenhuma categoria selecionada</h3>
+                        <p>Selecione uma categoria acima ou crie uma nova</p>
+                    </div>
+                </div>
+            </div>
+            <!-- FAB adicionar produto -->
+            <button class="btn-fab-page" id="fabAddProduct" onclick="openAddProductSheet()" style="display:none" title="Adicionar produto">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <!-- ===== TAB: ESTOQUE ===== -->
+        <div id="tab-stock" class="tab-page">
+            <div class="page-inner">
+                <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Estoque</h2>
+                <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Controle de inventário por produto</p>
+
+                <!-- Categorias scroll -->
+                <div class="cat-scroll" id="stockCatScroll">
+                    <div class="loading-state" style="padding:8px 0"><div class="loading-spinner"></div></div>
+                </div>
+
+                <!-- Lista estoque -->
+                <div id="stockList">
+                    <div class="empty-state">
+                        <i class="fa-solid fa-warehouse"></i>
+                        <h3>Selecione uma categoria</h3>
+                        <p>Visualize o estoque filtrando por categoria</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TAB: PERFIL ===== -->
+        <div id="tab-profile" class="tab-page">
+            <div class="page-inner">
+                <!-- Header do perfil -->
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar">?</div>
+                    <div class="profile-name-block">
+                        <h2 id="profileName">—</h2>
+                        <p id="profileEmail">—</p>
+                        <div class="profile-role-badge" id="profileBadge">
+                            <i class="fa-solid fa-circle-check"></i> <span id="profileRoleText">Membro</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grupo info -->
+                <div class="section-card" id="groupInfoCard">
+                    <div class="section-card-title">
+                        <span>Meu Grupo</span>
+                        <button onclick="openInviteSheet()">Convidar</button>
+                    </div>
+                    <div style="font-size:0.9rem;font-weight:500" id="groupInfoName">—</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px" id="groupInfoSeg">—</div>
+                    <div style="display:flex;gap:8px;margin-top:12px" id="groupInfoMeta">
+                        <div style="flex:1;background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;text-align:center">
+                            <div style="font-size:1rem;font-weight:600" id="groupMemberCount">0</div>
+                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Membros</div>
+                        </div>
+                        <div style="flex:1;background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;text-align:center">
+                            <div style="font-size:1rem;font-weight:600" id="groupProductCount">0</div>
+                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Produtos</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurações -->
+                <div class="section-card-title" style="margin-bottom:8px">Configurações</div>
+                <div class="settings-list">
+                    <div class="settings-item" onclick="openMembersPage()">
+                        <div class="settings-icon"><i class="fa-solid fa-users"></i></div>
+                        <div class="settings-text">
+                            <h4>Membros do Grupo</h4>
+                            <p>Gerenciar equipe e permissões</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right settings-arrow"></i>
+                    </div>
+                    <div class="settings-item" onclick="openInviteSheet()">
+                        <div class="settings-icon"><i class="fa-solid fa-link"></i></div>
+                        <div class="settings-text">
+                            <h4>Código de Convite</h4>
+                            <p>Compartilhe para sua equipe entrar</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right settings-arrow"></i>
+                    </div>
+                    <div class="settings-item" onclick="doLogout()">
+                        <div class="settings-icon" style="background:rgba(231,76,60,0.1)"><i class="fa-solid fa-right-from-bracket" style="color:var(--danger)"></i></div>
+                        <div class="settings-text">
+                            <h4>Sair</h4>
+                            <p>Encerrar sessão</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right settings-arrow"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <button class="bn-btn active" id="bn-home" onclick="switchTab('home')">
+            <i class="fa-solid fa-house"></i> Início
+        </button>
+        <button class="bn-btn" id="bn-products" onclick="switchTab('products')">
+            <i class="fa-solid fa-box"></i> Produtos
+        </button>
+        <button class="bn-fab" onclick="openRegisterSheet()">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+        <button class="bn-btn" id="bn-stock" onclick="switchTab('stock')">
+            <i class="fa-solid fa-warehouse"></i> Estoque
+        </button>
+        <button class="bn-btn" id="bn-profile" onclick="switchTab('profile')">
+            <i class="fa-regular fa-circle-user"></i> Perfil
+        </button>
+    </nav>
+
+    <!-- SIDENAV -->
+    <div id="sideNav" class="sidenav">
+        <button class="closebtn" onclick="closeSideNav()"><i class="fa-solid fa-xmark"></i></button>
+        <div class="sidenav-inner">
+            <div class="sidenav-header">
+                <div class="sidenav-app-name">Clearview Numera</div>
+                <div class="sidenav-group-name" id="sideNavGroupName">—</div>
+            </div>
+            <a href="#" onclick="switchTab('home');closeSideNav()"><i class="fa-solid fa-house"></i> Início</a>
+            <a href="#" onclick="switchTab('products');closeSideNav()"><i class="fa-solid fa-box"></i> Produtos</a>
+            <a href="#" onclick="switchTab('stock');closeSideNav()"><i class="fa-solid fa-warehouse"></i> Estoque</a>
+            <a href="#" onclick="switchTab('profile');closeSideNav()"><i class="fa-regular fa-circle-user"></i> Perfil</a>
+            <a href="#" onclick="openInviteSheet();closeSideNav()" style="margin-top:12px;border-top:1px solid var(--card-border)"><i class="fa-solid fa-link"></i> Código de Convite</a>
+            <a href="#" onclick="doLogout()" style="color:var(--danger)"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
+        </div>
+    </div>
+    <div class="overlay-bg" id="overlayBg" onclick="closeSideNav()"></div>
+</div>
+
+<!-- ============================= PAGE: MEMBROS ============================= -->
+<div id="page-members" class="page-slide">
+    <div class="page-slide-header">
+        <button class="page-slide-back" onclick="closeMembersPage()"><i class="fa-solid fa-arrow-left"></i></button>
+        <span class="page-slide-title">Membros do Grupo</span>
+        <button class="navbar-btn" onclick="openInviteSheet()"><i class="fa-solid fa-user-plus"></i></button>
+    </div>
+    <div class="page-slide-body">
+        <div class="members-list" id="membersList">
+            <div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= SHEET: REGISTRAR ============================= -->
+<div class="sheet-overlay" id="sheetRegister">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Registrar</span>
+            <button class="sheet-close" onclick="closeSheet('sheetRegister')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="register-options">
+            <div class="register-option sale" onclick="openSaleSheet()">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <h3>Venda</h3>
+                <p>Registrar uma nova venda</p>
+            </div>
+            <div class="register-option notice" onclick="openNoticeSheet()">
+                <i class="fa-solid fa-bullhorn"></i>
+                <h3>Aviso</h3>
+                <p>Comunicado para a equipe</p>
+            </div>
+            <div class="register-option stock" onclick="closeSheet('sheetRegister');switchTab('stock')">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <h3>Estoque</h3>
+                <p>Entrada ou saída de produto</p>
+            </div>
+            <div class="register-option product" onclick="closeSheet('sheetRegister');switchTab('products')">
+                <i class="fa-solid fa-tag"></i>
+                <h3>Produto</h3>
+                <p>Cadastrar novo produto</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= SHEET: VENDA ============================= -->
+<div class="sheet-overlay" id="sheetSale">
+    <div class="sheet-content" style="max-height:92vh">
+        <div class="sheet-handle"></div>
+
+        <!-- Step 1: Categorias -->
+        <div class="sale-step active" id="saleStep1">
+            <div class="sheet-header">
+                <span class="sheet-title">Nova Venda</span>
+                <button class="sheet-close" onclick="closeSheet('sheetSale')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-sec);margin-bottom:16px">Selecione a categoria do produto</p>
+            <div class="sale-cat-grid" id="saleCatGrid">
+                <div class="loading-state" style="grid-column:span 2"><div class="loading-spinner"></div></div>
+            </div>
+            <!-- Personalizado -->
+            <div style="margin-top:8px">
+                <button class="btn-secondary" style="margin-top:0" onclick="goSaleStep('custom')">
+                    <i class="fa-solid fa-pen"></i> Personalizado
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Produtos da categoria -->
+        <div class="sale-step" id="saleStep2">
+            <div class="sale-step-header">
+                <button class="sale-step-back" onclick="goSaleStep(1)"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="sale-step-title" id="saleStep2CatName">Categoria</span>
+                <button class="sheet-close" onclick="closeSheet('sheetSale')" style="margin-left:auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="sale-product-list" id="saleProductList">
+                <div class="loading-state"><div class="loading-spinner"></div></div>
+            </div>
+            <button class="btn-secondary" style="margin-top:8px" onclick="goSaleStep(3)" id="btnGoCart">
+                Ver Carrinho <span class="badge" id="cartBadge">0</span>
+            </button>
+        </div>
+
+        <!-- Step Custom: Venda personalizada -->
+        <div class="sale-step" id="saleStepCustom">
+            <div class="sale-step-header">
+                <button class="sale-step-back" onclick="goSaleStep(1)"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="sale-step-title">Produto Personalizado</span>
+                <button class="sheet-close" onclick="closeSheet('sheetSale')" style="margin-left:auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="custom-sale-banner">
+                <i class="fa-solid fa-circle-info"></i>
+                O produto será salvo automaticamente na categoria escolhida para uso futuro
+            </div>
+            <div class="form-field">
+                <label class="form-label">Nome do Produto</label>
+                <input type="text" id="customProductName" class="form-input" placeholder="Ex: iPhone 14 128GB Preto">
+            </div>
+            <div class="form-input-row">
+                <div class="form-field">
+                    <label class="form-label">Categoria</label>
+                    <select id="customProductCat" class="form-select"></select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Qtd</label>
+                    <input type="number" id="customProductQty" class="form-input" value="1" min="1">
+                </div>
+            </div>
+            <div class="form-input-row">
+                <div class="form-field">
+                    <label class="form-label">Valor de Venda (R$)</label>
+                    <input type="text" id="customProductPrice" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Valor de Custo (R$)</label>
+                    <input type="text" id="customProductCost" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="addCustomToCart()">
+                <i class="fa-solid fa-cart-plus"></i> Adicionar ao Carrinho
+            </button>
+            <button class="btn-secondary" onclick="goSaleStep(3)" style="display:none" id="btnCustomGoCart">
+                Ver Carrinho <span class="badge" id="cartBadgeCustom">0</span>
+            </button>
+        </div>
+
+        <!-- Step 3: Carrinho -->
+        <div class="sale-step" id="saleStep3">
+            <div class="sale-step-header">
+                <button class="sale-step-back" onclick="goSaleStep(1)"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="sale-step-title">Carrinho</span>
+                <button class="sheet-close" onclick="closeSheet('sheetSale')" style="margin-left:auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="cart-items-list" id="cartItemsList"></div>
+            <div class="cart-total-row">
+                <span class="cart-total-label">Total da venda</span>
+                <span class="cart-total-value" id="cartTotal">R$ 0,00</span>
+            </div>
+            <textarea class="cart-note-input" id="saleNote" rows="2" placeholder="Observação (opcional)..."></textarea>
+            <button class="btn-primary" onclick="confirmSale()" id="btnConfirmSale">
+                <i class="fa-solid fa-check"></i> Confirmar Venda
+            </button>
+            <button class="btn-secondary" onclick="goSaleStep(1)">Adicionar mais produtos</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= SHEET: AVISO ============================= -->
+<div class="sheet-overlay" id="sheetNotice">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Novo Aviso</span>
+            <button class="sheet-close" onclick="closeSheet('sheetNotice')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="notice-type-row">
+            <button class="notice-type-btn active" id="noticeTypeInfo" onclick="setNoticeType('info')">📋 Geral</button>
+            <button class="notice-type-btn" id="noticeTypeAlert" onclick="setNoticeType('alert')">⚠️ Urgente</button>
+            <button class="notice-type-btn" id="noticeTypeCelebrate" onclick="setNoticeType('celebrate')">🎉 Parabéns</button>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Título</label>
+            <input type="text" id="noticeTitle" class="form-input" placeholder="Reunião amanhã às 9h...">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Mensagem</label>
+            <textarea class="form-textarea" id="noticeMsg" rows="3" placeholder="Escreva o aviso para sua equipe..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="postNotice()">
+            <i class="fa-solid fa-bullhorn"></i> Publicar Aviso
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetNotice')">Cancelar</button>
+    </div>
+</div>
+
+<!-- ============================= SHEET: ADICIONAR PRODUTO ============================= -->
+<div class="sheet-overlay" id="sheetAddProduct">
+    <div class="sheet-content" style="max-height:92vh">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Cadastrar Produto</span>
+            <button class="sheet-close" onclick="closeSheet('sheetAddProduct')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Categoria</label>
+            <select id="addProductCat" class="form-select" onchange="checkNewCatFromSelect(this)">
+                <option value="">Selecionar categoria...</option>
+                <option value="__new__">+ Nova categoria</option>
+            </select>
+        </div>
+        <div class="form-field" id="newCatField" style="display:none">
+            <label class="form-label">Nome da nova categoria</label>
+            <input type="text" id="newCatName" class="form-input" placeholder="Ex: Celulares, Eletrodomésticos...">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Nome do Produto</label>
+            <input type="text" id="addProductName" class="form-input" placeholder="Ex: iPhone 14">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Modelo / Variante</label>
+            <input type="text" id="addProductModel" class="form-input" placeholder="Ex: 128GB, 256GB, Preto, Branco...">
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label">Preço de Venda (R$)</label>
+                <input type="text" id="addProductSalePrice" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Preço de Custo (R$)</label>
+                <input type="text" id="addProductCostPrice" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+            </div>
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label">Unidade</label>
+                <select id="addProductUnit" class="form-select">
+                    <option value="un">Unidades</option>
+                    <option value="kg">Quilogramas (kg)</option>
+                    <option value="g">Gramas (g)</option>
+                    <option value="l">Litros (L)</option>
+                    <option value="ml">Mililitros (ml)</option>
+                    <option value="m">Metros (m)</option>
+                    <option value="m2">Metros² (m²)</option>
+                    <option value="cx">Caixas</option>
+                    <option value="pct">Pacotes</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Estoque Inicial</label>
+                <input type="number" id="addProductStock" class="form-input" placeholder="0" value="0" min="0">
+            </div>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Descrição (opcional)</label>
+            <textarea id="addProductDesc" class="form-textarea" rows="2" placeholder="Descrição do produto..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveProduct()" id="btnSaveProduct">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Produto
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetAddProduct')">Cancelar</button>
+    </div>
+</div>
+
+<!-- ============================= SHEET: AJUSTAR ESTOQUE ============================= -->
+<div class="sheet-overlay" id="sheetStockAdjust">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title" id="stockAdjustTitle">Ajustar Estoque</span>
+            <button class="sheet-close" onclick="closeSheet('sheetStockAdjust')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+            <div>
+                <div style="font-size:0.9rem;font-weight:500" id="stockAdjProductName">—</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)" id="stockAdjProductModel">—</div>
+            </div>
+            <div style="margin-left:auto;text-align:right">
+                <div style="font-size:1.2rem;font-weight:700" id="stockAdjCurrentQty">0</div>
+                <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px" id="stockAdjCurrentUnit">un</div>
+            </div>
+        </div>
+        <div class="notice-type-row">
+            <button class="notice-type-btn active" id="adjTypeIn" onclick="setAdjType('in')">📦 Entrada</button>
+            <button class="notice-type-btn" id="adjTypeOut" onclick="setAdjType('out')">📤 Saída</button>
+            <button class="notice-type-btn" id="adjTypeSet" onclick="setAdjType('set')">🎯 Definir</button>
+        </div>
+        <div class="form-field">
+            <label class="form-label" id="adjQtyLabel">Quantidade a adicionar</label>
+            <input type="number" id="adjQty" class="form-input" placeholder="0" min="0" value="">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Observação (opcional)</label>
+            <input type="text" id="adjNote" class="form-input" placeholder="Motivo da movimentação...">
+        </div>
+        <button class="btn-primary" onclick="confirmStockAdj()" id="btnConfirmStockAdj">
+            Confirmar
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetStockAdjust')">Cancelar</button>
+    </div>
+</div>
+
+<!-- ============================= SHEET: CONVITE ============================= -->
+<div class="sheet-overlay" id="sheetInvite">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Código de Convite</span>
+            <button class="sheet-close" onclick="closeSheet('sheetInvite')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="invite-section">
+            <p>Compartilhe este código com os membros da sua equipe para eles entrarem no grupo</p>
+            <span class="invite-code-big" id="inviteCodeBig">------</span>
+            <button class="btn-primary" onclick="copyInviteCode()">
+                <i class="fa-regular fa-copy"></i> Copiar Código
+            </button>
+        </div>
+        <div class="form-field" style="margin-top:12px">
+            <button class="btn-secondary" style="margin-top:0" onclick="regenerateCode()" id="btnRegenCode">
+                <i class="fa-solid fa-rotate"></i> Gerar Novo Código
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================= FIREBASE + JS ============================= -->
+<!-- Firebase SDK Compat -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+/* ============================================================
+   FIREBASE CONFIG
+   ⚠️ Substitua pelos seus valores do Firebase Console
+   Firebase Console → Project Settings → Your Apps → Web App
+   
+   INSTRUÇÕES DE CONFIGURAÇÃO:
+   1. Acesse https://console.firebase.google.com
+   2. Crie um projeto (ou use existente)
+   3. Vá em Authentication → Sign-in method → Ative Email/Password e Google
+   4. Vá em Firestore Database → Crie banco em modo "production"
+   5. Cole as rules abaixo em Firestore → Rules:
+   
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{uid} {
+         allow read, write: if request.auth.uid == uid;
+       }
+       match /groups/{groupId} {
+         allow read: if request.auth != null;
+         allow create: if request.auth != null;
+         allow update: if request.auth != null &&
+           get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role in ['admin','manager'];
+         match /members/{uid} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /products/{productId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /stock/{productId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /sales/{saleId} {
+           allow read: if request.auth != null;
+           allow create: if request.auth != null;
+           allow update, delete: if request.auth != null &&
+             (resource.data.sellerId == request.auth.uid ||
+              get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role in ['admin','manager']);
+         }
+         match /feed/{feedId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /categories/{catId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+       }
+     }
+   }
+   
+   6. Vá em Project Settings → General → Your apps → Add web app
+   7. Copie o firebaseConfig gerado e cole abaixo
+============================================================ */
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_PROJETO.firebaseapp.com",
+    projectId: "SEU_PROJETO_ID",
+    storageBucket: "SEU_PROJETO.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* ============================================================
+   STATE
+============================================================ */
+let currentUser = null;
+let currentUserData = null;
+let currentGroup = null;
+let currentGroupId = null;
+let currentMemberData = null;
+let feedUnsubscribe = null;
+let cart = [];
+let selectedCatId = null;
+let selectedCatName = null;
+let stockAdjProduct = null;
+let stockAdjType = 'in';
+let noticeType = 'info';
+let activeProductCat = null;
+let activeStockCat = null;
+
+/* ============================================================
+   UTILS
+============================================================ */
+function formatBRL(val) {
+    if (!val && val !== 0) return 'R$ 0,00';
+    return 'R$ ' + Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function parseMoney(str) {
+    if (!str) return 0;
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+}
+function maskMoney(el) {
+    let v = el.value.replace(/\D/g, '');
+    v = (parseInt(v, 10) / 100).toFixed(2);
+    v = v.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    el.value = v;
+}
+function maskCpf(el) {
+    let v = el.value.replace(/\D/g, '').substring(0, 11);
+    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    el.value = v;
+}
+function maskPhone(el) {
+    let v = el.value.replace(/\D/g, '').substring(0, 11);
+    v = v.replace(/(\d{2})(\d)/, '($1) $2');
+    v = v.replace(/(\d{5})(\d{4})$/, '$1-$2');
+    el.value = v;
+}
+function togglePass(id, btn) {
+    const inp = document.getElementById(id);
+    const icon = btn.querySelector('i');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        inp.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+}
+function showToast(msg, type='info') {
+    const t = document.getElementById('toast');
+    const icons = { success: 'fa-circle-check', error: 'fa-circle-exclamation', info: 'fa-circle-info' };
+    t.innerHTML = `<i class="fa-solid ${icons[type] || 'fa-circle-info'}"></i> ${msg}`;
+    t.className = `toast ${type} show`;
+    clearTimeout(t._to);
+    t._to = setTimeout(() => t.classList.remove('show'), 3000);
+}
+function setLoading(btnId, loading, originalText) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (loading) {
+        btn.disabled = true;
+        btn.dataset.orig = btn.innerHTML;
+        btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;border-width:2px;margin:0 auto"></div>';
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = originalText || btn.dataset.orig || btn.innerHTML;
+    }
+}
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+function timeAgo(date) {
+    if (!date) return '';
+    const d = date.toDate ? date.toDate() : new Date(date);
+    const diff = Math.floor((Date.now() - d) / 1000);
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}min atrás`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+    return d.toLocaleDateString('pt-BR');
+}
+function generateCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+}
+function isToday(date) {
+    if (!date) return false;
+    const d = date.toDate ? date.toDate() : new Date(date);
+    const now = new Date();
+    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+function isThisWeek(date) {
+    if (!date) return false;
+    const d = date.toDate ? date.toDate() : new Date(date);
+    const now = new Date();
+    const diff = (now - d) / (1000 * 60 * 60 * 24);
+    return diff <= 7;
+}
+function isThisMonth(date) {
+    if (!date) return false;
+    const d = date.toDate ? date.toDate() : new Date(date);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+function getRoleBadge(role) {
+    const roles = {
+        admin: { label: 'Admin', cls: 'admin' },
+        manager: { label: 'Gerente', cls: 'manager' },
+        seller: { label: 'Vendedor', cls: '' },
+        stockist: { label: 'Estoquista', cls: 'stockist' },
+    };
+    return roles[role] || { label: 'Membro', cls: '' };
+}
+function canManageStock() {
+    if (!currentMemberData) return false;
+    if (['admin', 'manager'].includes(currentMemberData.role)) return true;
+    return currentMemberData.canManageStock === true;
+}
+function isAdminOrManager() {
+    if (!currentMemberData) return false;
+    return ['admin', 'manager'].includes(currentMemberData.role);
+}
+
+/* ============================================================
+   AUTH
+============================================================ */
+function showMainAuth() {
+    document.getElementById('authPanelsTrack').className = 'auth-panels-track';
+}
+function showLoginPanel() {
+    document.getElementById('authPanelsTrack').className = 'auth-panels-track to-login';
+}
+function showRegisterPanel() {
+    document.getElementById('authPanelsTrack').className = 'auth-panels-track to-register';
+}
+
+async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    if (!email || !pass) { showToast('Preencha e-mail e senha', 'error'); return; }
+    setLoading('btnLoginAction', true);
+    try {
+        await auth.signInWithEmailAndPassword(email, pass);
+    } catch(e) {
+        const msgs = {
+            'auth/user-not-found': 'Usuário não encontrado',
+            'auth/wrong-password': 'Senha incorreta',
+            'auth/invalid-email': 'E-mail inválido',
+            'auth/too-many-requests': 'Muitas tentativas, tente depois',
+        };
+        showToast(msgs[e.code] || 'Erro ao entrar: ' + e.message, 'error');
+        setLoading('btnLoginAction', false, 'Entrar <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>');
+    }
+}
+
+async function doRegister() {
+    const name = document.getElementById('regName').value.trim();
+    const surname = document.getElementById('regSurname').value.trim();
+    const nickname = document.getElementById('regNickname').value.trim();
+    const cpf = document.getElementById('regCpf').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const cargo = document.getElementById('regCargo').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const pass = document.getElementById('regPass').value;
+    if (!name || !surname || !email || !pass) { showToast('Preencha os campos obrigatórios', 'error'); return; }
+    if (pass.length < 6) { showToast('Senha deve ter pelo menos 6 caracteres', 'error'); return; }
+    setLoading('btnRegAction', true);
+    try {
+        const cred = await auth.createUserWithEmailAndPassword(email, pass);
+        await db.collection('users').doc(cred.user.uid).set({
+            name, surname, nickname: nickname || name, cpf, phone, cargo,
+            email, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            groupId: null
+        });
+        showToast('Conta criada! Agora configure seu grupo.', 'success');
+    } catch(e) {
+        const msgs = {
+            'auth/email-already-in-use': 'E-mail já cadastrado',
+            'auth/invalid-email': 'E-mail inválido',
+            'auth/weak-password': 'Senha fraca',
+        };
+        showToast(msgs[e.code] || 'Erro: ' + e.message, 'error');
+        setLoading('btnRegAction', false, 'Criar Conta <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>');
+    }
+}
+
+async function authGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+        const res = await auth.signInWithPopup(provider);
+        // Verifica se já tem doc de usuário
+        const doc = await db.collection('users').doc(res.user.uid).get();
+        if (!doc.exists) {
+            const displayName = (res.user.displayName || '').split(' ');
+            await db.collection('users').doc(res.user.uid).set({
+                name: displayName[0] || '',
+                surname: displayName.slice(1).join(' ') || '',
+                nickname: displayName[0] || '',
+                cpf: '', phone: '', cargo: '',
+                email: res.user.email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                groupId: null
+            });
+        }
+    } catch(e) {
+        if (e.code !== 'auth/popup-closed-by-user') showToast('Erro ao entrar com Google', 'error');
+    }
+}
+
+function doLogout() {
+    if (!confirm('Deseja sair da sua conta?')) return;
+    if (feedUnsubscribe) feedUnsubscribe();
+    auth.signOut();
+}
+
+/* ============================================================
+   GROUP SCREEN
+============================================================ */
+function showGroupOptions() {
+    document.getElementById('groupOptions').style.display = 'flex';
+    document.querySelectorAll('.group-form-section').forEach(s => s.classList.remove('active'));
+}
+function showGroupCreate() {
+    document.getElementById('groupOptions').style.display = 'none';
+    document.getElementById('groupCreateForm').classList.add('active');
+}
+function showGroupJoin() {
+    document.getElementById('groupOptions').style.display = 'none';
+    document.getElementById('groupJoinForm').classList.add('active');
+}
+
+async function createGroup() {
+    const name = document.getElementById('groupName').value.trim();
+    const seg = document.getElementById('groupSegmento').value.trim();
+    if (!name) { showToast('Digite o nome do grupo', 'error'); return; }
+    setLoading('btnCreateGroup', true);
+    try {
+        const code = generateCode();
+        const groupRef = await db.collection('groups').add({
+            name, segmento: seg,
+            code, ownerId: currentUser.uid,
+            productCounter: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        // Adicionar como admin
+        await groupRef.collection('members').doc(currentUser.uid).set({
+            role: 'admin',
+            canManageStock: true,
+            name: currentUserData.name,
+            surname: currentUserData.surname,
+            nickname: currentUserData.nickname,
+            cargo: currentUserData.cargo || 'Admin',
+            email: currentUserData.email,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        // Atualizar usuário com groupId
+        await db.collection('users').doc(currentUser.uid).update({ groupId: groupRef.id });
+        currentUserData.groupId = groupRef.id;
+        showToast('Grupo criado com sucesso!', 'success');
+        await loadGroup(groupRef.id);
+        startApp();
+    } catch(e) {
+        showToast('Erro ao criar grupo: ' + e.message, 'error');
+        setLoading('btnCreateGroup', false, 'Criar Grupo <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>');
+    }
+}
+
+async function joinGroup() {
+    const code = document.getElementById('joinCode').value.trim().toUpperCase();
+    if (code.length !== 6) { showToast('Código deve ter 6 caracteres', 'error'); return; }
+    setLoading('btnJoinGroup', true);
+    try {
+        const snap = await db.collection('groups').where('code', '==', code).limit(1).get();
+        if (snap.empty) {
+            showToast('Código inválido ou expirado', 'error');
+            setLoading('btnJoinGroup', false, 'Entrar no Grupo <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>');
+            return;
+        }
+        const groupDoc = snap.docs[0];
+        // Verificar se já é membro
+        const memberDoc = await groupDoc.ref.collection('members').doc(currentUser.uid).get();
+        if (memberDoc.exists) {
+            await db.collection('users').doc(currentUser.uid).update({ groupId: groupDoc.id });
+            currentUserData.groupId = groupDoc.id;
+            await loadGroup(groupDoc.id);
+            startApp();
+            return;
+        }
+        // Entrar como vendedor
+        await groupDoc.ref.collection('members').doc(currentUser.uid).set({
+            role: 'seller',
+            canManageStock: false,
+            name: currentUserData.name,
+            surname: currentUserData.surname,
+            nickname: currentUserData.nickname,
+            cargo: currentUserData.cargo || 'Vendedor',
+            email: currentUserData.email,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await db.collection('users').doc(currentUser.uid).update({ groupId: groupDoc.id });
+        currentUserData.groupId = groupDoc.id;
+        showToast('Bem-vindo ao grupo!', 'success');
+        await loadGroup(groupDoc.id);
+        startApp();
+    } catch(e) {
+        showToast('Erro ao entrar no grupo: ' + e.message, 'error');
+        setLoading('btnJoinGroup', false, 'Entrar no Grupo <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>');
+    }
+}
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+function switchTab(name) {
+    document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    const btn = document.getElementById('bn-' + name);
+    if (btn) btn.classList.add('active');
+    // Load tab data
+    if (name === 'home') loadHomeData();
+    if (name === 'products') loadProductsTab();
+    if (name === 'stock') loadStockTab();
+    if (name === 'profile') loadProfileTab();
+}
+function openSideNav() {
+    document.getElementById('sideNav').classList.add('open');
+    document.getElementById('overlayBg').style.display = 'block';
+}
+function closeSideNav() {
+    document.getElementById('sideNav').classList.remove('open');
+    document.getElementById('overlayBg').style.display = 'none';
+}
+function openSheet(id) {
+    document.getElementById(id).classList.add('active');
+}
+function closeSheet(id) {
+    document.getElementById(id).classList.remove('active');
+}
+function openRegisterSheet() {
+    closeSheet('sheetSale'); closeSheet('sheetNotice');
+    openSheet('sheetRegister');
+}
+
+/* ============================================================
+   LOAD GROUP
+============================================================ */
+async function loadGroup(groupId) {
+    currentGroupId = groupId;
+    const groupDoc = await db.collection('groups').doc(groupId).get();
+    if (!groupDoc.exists) return;
+    currentGroup = { id: groupId, ...groupDoc.data() };
+    const memberDoc = await db.collection('groups').doc(groupId).collection('members').doc(currentUser.uid).get();
+    if (memberDoc.exists) currentMemberData = memberDoc.data();
+}
+
+/* ============================================================
+   HOME TAB
+============================================================ */
+async function loadHomeData() {
+    if (!currentGroupId) return;
+    // Atualizar saudações
+    const nick = currentUserData.nickname || currentUserData.name;
+    document.getElementById('homeGreetName').textContent = nick;
+    document.getElementById('homeGroupName').textContent = currentGroup ? currentGroup.name : '—';
+    document.getElementById('splashNome').textContent = nick;
+    // Carregar vendas
+    try {
+        const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales').orderBy('createdAt', 'desc').limit(200).get();
+        const sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // My stats
+        const mySales = sales.filter(s => s.sellerId === currentUser.uid);
+        const myToday = mySales.filter(s => isToday(s.createdAt));
+        const myWeek = mySales.filter(s => isThisWeek(s.createdAt));
+        const myTodayTotal = myToday.reduce((a, s) => a + (s.total || 0), 0);
+        const myWeekTotal = myWeek.reduce((a, s) => a + (s.total || 0), 0);
+        document.getElementById('myDaySales').textContent = formatBRL(myTodayTotal);
+        document.getElementById('myDayCount').textContent = `${myToday.length} venda${myToday.length !== 1 ? 's' : ''}`;
+        document.getElementById('myWeekSales').textContent = formatBRL(myWeekTotal);
+        document.getElementById('myWeekCount').textContent = `${myWeek.length} venda${myWeek.length !== 1 ? 's' : ''}`;
+        // Group stats
+        const groupToday = sales.filter(s => isToday(s.createdAt));
+        const groupMonth = sales.filter(s => isThisMonth(s.createdAt));
+        document.getElementById('groupDaySales').textContent = formatBRL(groupToday.reduce((a, s) => a + (s.total || 0), 0));
+        document.getElementById('groupMonthSales').textContent = formatBRL(groupMonth.reduce((a, s) => a + (s.total || 0), 0));
+        // Ranking today
+        renderRanking(groupToday);
+    } catch(e) { console.error(e); }
+    // Feed real-time
+    loadFeed();
+}
+
+function renderRanking(todaySales) {
+    // Agrupa por vendedor
+    const map = {};
+    todaySales.forEach(s => {
+        if (!map[s.sellerId]) map[s.sellerId] = { name: s.sellerNickname || s.sellerName || '?', total: 0, count: 0 };
+        map[s.sellerId].total += s.total || 0;
+        map[s.sellerId].count++;
+    });
+    const sorted = Object.entries(map).sort((a, b) => b[1].total - a[1].total);
+    if (sorted.length === 0) { document.getElementById('topSellersSection').style.display = 'none'; return; }
+    document.getElementById('topSellersSection').style.display = 'block';
+    const list = document.getElementById('sellersList');
+    list.innerHTML = sorted.slice(0, 8).map(([uid, data], i) => `
+        <div class="seller-chip">
+            <div class="seller-avatar ${uid === currentUser.uid ? 'me' : ''}">
+                ${getInitials(data.name)}
+                <div class="seller-avatar-rank">${i + 1}</div>
+            </div>
+            <div class="seller-name">${data.name}</div>
+            <div class="seller-val">${formatBRL(data.total)}</div>
+        </div>
+    `).join('');
+}
+
+function loadFeed(forceRefresh = false) {
+    if (!currentGroupId) return;
+    if (feedUnsubscribe && !forceRefresh) return;
+    if (feedUnsubscribe) feedUnsubscribe();
+    const list = document.getElementById('feedList');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>';
+    feedUnsubscribe = db.collection('groups').doc(currentGroupId).collection('feed')
+        .orderBy('createdAt', 'desc').limit(30)
+        .onSnapshot(snap => {
+            if (snap.empty) {
+                list.innerHTML = '<div class="feed-empty"><i class="fa-solid fa-wave-square"></i>Nenhuma atividade ainda. Registre uma venda!</div>';
+                return;
+            }
+            list.innerHTML = snap.docs.map(d => renderFeedItem(d.data())).join('');
+        }, err => {
+            list.innerHTML = '<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>Erro ao carregar atividades</div>';
+        });
+}
+
+function renderFeedItem(data) {
+    const typeMap = {
+        sale: { icon: 'fa-cart-shopping', cls: 'sale' },
+        stock_in: { icon: 'fa-boxes-stacked', cls: 'stock-in' },
+        stock_out: { icon: 'fa-box-arrow-up', cls: 'stock-out' },
+        notice: { icon: 'fa-bullhorn', cls: 'notice' },
+        product: { icon: 'fa-tag', cls: 'product' },
+    };
+    const t = typeMap[data.type] || typeMap.notice;
+    const amountHtml = data.amount ? `<div class="feed-amount">${formatBRL(data.amount)}</div>` : (data.type === 'stock_in' || data.type === 'stock_out' ? `<div class="feed-amount neutral">${data.qty || ''} ${data.unit || ''}</div>` : '');
+    return `
+    <div class="feed-item">
+        <div class="feed-icon ${t.cls}"><i class="fa-solid ${t.icon}"></i></div>
+        <div class="feed-body">
+            <div class="feed-who">${data.userName || '?'} <span>${data.userNickname ? '(' + data.userNickname + ')' : ''}</span></div>
+            <div class="feed-desc">${data.description || ''}</div>
+            <div class="feed-meta"><i class="fa-regular fa-clock"></i> ${timeAgo(data.createdAt)}</div>
+        </div>
+        ${amountHtml}
+    </div>`;
+}
+
+async function addToFeed(type, description, extra = {}) {
+    if (!currentGroupId) return;
+    await db.collection('groups').doc(currentGroupId).collection('feed').add({
+        type,
+        description,
+        userName: currentUserData.name + ' ' + currentUserData.surname,
+        userNickname: currentUserData.nickname,
+        userId: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        ...extra
+    });
+}
+
+/* ============================================================
+   REGISTRAR SHEET
+============================================================ */
+function openRegisterSheet() {
+    openSheet('sheetRegister');
+}
+
+/* ============================================================
+   SALE FLOW
+============================================================ */
+async function openSaleSheet() {
+    closeSheet('sheetRegister');
+    cart = [];
+    updateCartBadge();
+    openSheet('sheetSale');
+    goSaleStep(1);
+    await loadSaleCategories();
+}
+
+async function loadSaleCategories() {
+    const grid = document.getElementById('saleCatGrid');
+    grid.innerHTML = '<div class="loading-state" style="grid-column:span 2"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('categories').orderBy('name').get();
+        if (snap.empty) {
+            grid.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:20px;color:var(--text-muted);font-size:0.82rem">Nenhuma categoria ainda. Use "Personalizado" ou cadastre um produto.</div>';
+            return;
+        }
+        // Populate custom cat select too
+        const catSel = document.getElementById('customProductCat');
+        catSel.innerHTML = '<option value="">Selecionar...</option>';
+        grid.innerHTML = snap.docs.map(d => {
+            catSel.innerHTML += `<option value="${d.id}">${d.data().name}</option>`;
+            return `<button class="sale-cat-btn" onclick="selectSaleCat('${d.id}','${d.data().name.replace(/'/g,"\\'")}')">
+                <i class="fa-solid fa-tag"></i> ${d.data().name}
+            </button>`;
+        }).join('');
+    } catch(e) { grid.innerHTML = '<div style="grid-column:span 2;color:var(--danger);font-size:0.8rem;text-align:center">Erro ao carregar</div>'; }
+}
+
+async function selectSaleCat(catId, catName) {
+    selectedCatId = catId;
+    selectedCatName = catName;
+    document.getElementById('saleStep2CatName').textContent = catName;
+    goSaleStep(2);
+    await loadSaleProducts(catId);
+}
+
+async function loadSaleProducts(catId) {
+    const list = document.getElementById('saleProductList');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('products')
+            .where('categoryId', '==', catId).where('active', '==', true).orderBy('name').get();
+        if (snap.empty) {
+            list.innerHTML = '<div class="feed-empty" style="padding:24px"><i class="fa-solid fa-box-open"></i>Nenhum produto nesta categoria</div>';
+            return;
+        }
+        list.innerHTML = snap.docs.map(d => {
+            const p = d.data();
+            const cartItem = cart.find(c => c.productId === d.id);
+            const qty = cartItem ? cartItem.qty : 0;
+            return `<div class="sale-product-row" id="spr_${d.id}">
+                <div class="sale-product-info">
+                    <div class="sale-product-name">${p.name}${p.model ? ' <span style="color:var(--text-muted);font-size:0.7rem">' + p.model + '</span>' : ''}</div>
+                    <div class="sale-product-price">${formatBRL(p.salePrice)}</div>
+                </div>
+                <div class="sale-qty-ctrl">
+                    <button class="sale-qty-btn" onclick="adjustCart('${d.id}','${p.name.replace(/'/g,"\\'")}',${p.salePrice},'${p.unit||'un'}',-1)">−</button>
+                    <span class="sale-qty-val" id="sqv_${d.id}">${qty}</span>
+                    <button class="sale-qty-btn" onclick="adjustCart('${d.id}','${p.name.replace(/'/g,"\\'")}',${p.salePrice},'${p.unit||'un'}',1)">+</button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) { list.innerHTML = '<div style="color:var(--danger);font-size:0.8rem;text-align:center;padding:16px">Erro ao carregar produtos</div>'; }
+}
+
+function adjustCart(productId, name, price, unit, delta) {
+    let item = cart.find(c => c.productId === productId);
+    if (!item) {
+        if (delta <= 0) return;
+        item = { productId, name, price, unit, qty: 0 };
+        cart.push(item);
+    }
+    item.qty = Math.max(0, item.qty + delta);
+    if (item.qty === 0) cart = cart.filter(c => c.productId !== productId);
+    const qtyEl = document.getElementById('sqv_' + productId);
+    if (qtyEl) qtyEl.textContent = item.qty || 0;
+    updateCartBadge();
+}
+
+function updateCartBadge() {
+    const total = cart.reduce((a, c) => a + c.qty, 0);
+    ['cartBadge', 'cartBadgeCustom'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = total;
+    });
+    const btnCustomCart = document.getElementById('btnCustomGoCart');
+    if (btnCustomCart) btnCustomCart.style.display = total > 0 ? 'flex' : 'none';
+}
+
+function goSaleStep(step) {
+    document.querySelectorAll('.sale-step').forEach(s => s.classList.remove('active'));
+    if (step === 'custom') {
+        document.getElementById('saleStepCustom').classList.add('active');
+    } else {
+        const el = document.getElementById('saleStep' + step);
+        if (el) el.classList.add('active');
+    }
+    if (step === 3) renderCart();
+}
+
+function renderCart() {
+    const list = document.getElementById('cartItemsList');
+    if (cart.length === 0) {
+        list.innerHTML = '<div class="feed-empty" style="padding:20px"><i class="fa-solid fa-cart-shopping"></i>Carrinho vazio</div>';
+        document.getElementById('cartTotal').textContent = 'R$ 0,00';
+        return;
+    }
+    let total = 0;
+    list.innerHTML = cart.map(item => {
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+        return `<div class="cart-item">
+            <div>
+                <div class="cart-item-name">${item.name}</div>
+                <div class="cart-item-sub">${item.qty} × ${formatBRL(item.price)}</div>
+            </div>
+            <div class="cart-item-total">${formatBRL(subtotal)}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('cartTotal').textContent = formatBRL(total);
+}
+
+async function confirmSale() {
+    if (cart.length === 0) { showToast('Carrinho vazio', 'error'); return; }
+    setLoading('btnConfirmSale', true);
+    try {
+        const total = cart.reduce((a, c) => a + c.price * c.qty, 0);
+        const note = document.getElementById('saleNote').value.trim();
+        const saleData = {
+            items: cart.map(c => ({ productId: c.productId, productName: c.name, qty: c.qty, price: c.price, unit: c.unit })),
+            total, note,
+            sellerId: currentUser.uid,
+            sellerName: currentUserData.name + ' ' + currentUserData.surname,
+            sellerNickname: currentUserData.nickname,
+            groupId: currentGroupId,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('groups').doc(currentGroupId).collection('sales').add(saleData);
+        // Decrementar estoque
+        const batch = db.batch();
+        for (const item of cart) {
+            if (item.productId && !item.productId.startsWith('custom_')) {
+                const stockRef = db.collection('groups').doc(currentGroupId).collection('stock').doc(item.productId);
+                batch.set(stockRef, {
+                    quantity: firebase.firestore.FieldValue.increment(-item.qty),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            }
+        }
+        await batch.commit();
+        // Feed
+        const itemsDesc = cart.map(c => `${c.qty}× ${c.name}`).join(', ');
+        await addToFeed('sale', `Registrou venda: ${itemsDesc}`, { amount: total });
+        showToast('Venda registrada!', 'success');
+        closeSheet('sheetSale');
+        cart = [];
+        loadHomeData();
+    } catch(e) {
+        showToast('Erro ao registrar venda: ' + e.message, 'error');
+    } finally {
+        setLoading('btnConfirmSale', false, '<i class="fa-solid fa-check"></i> Confirmar Venda');
+    }
+}
+
+async function addCustomToCart() {
+    const name = document.getElementById('customProductName').value.trim();
+    const catId = document.getElementById('customProductCat').value;
+    const qty = parseInt(document.getElementById('customProductQty').value) || 1;
+    const price = parseMoney(document.getElementById('customProductPrice').value);
+    const cost = parseMoney(document.getElementById('customProductCost').value);
+    if (!name || !catId || !price) { showToast('Preencha nome, categoria e valor de venda', 'error'); return; }
+    // Salvar produto
+    try {
+        const catDoc = await db.collection('groups').doc(currentGroupId).collection('categories').doc(catId).get();
+        const catName = catDoc.exists ? catDoc.data().name : '';
+        // Gerar código
+        const groupDoc = await db.collection('groups').doc(currentGroupId).get();
+        const counter = (groupDoc.data().productCounter || 0) + 1;
+        await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
+        const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
+        const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
+            name, categoryId: catId, categoryName: catName,
+            salePrice: price, costPrice: cost,
+            model: '', description: '', unit: 'un', code,
+            active: true, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: currentUser.uid
+        });
+        cart.push({ productId: prodRef.id, name, price, unit: 'un', qty });
+        updateCartBadge();
+        showToast(`"${name}" adicionado ao carrinho e salvo!`, 'success');
+        // Limpar campos
+        document.getElementById('customProductName').value = '';
+        document.getElementById('customProductPrice').value = '';
+        document.getElementById('customProductCost').value = '';
+        document.getElementById('customProductQty').value = '1';
+        goSaleStep(3);
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ============================================================
+   NOTICE / AVISO
+============================================================ */
+function openNoticeSheet() {
+    closeSheet('sheetRegister');
+    openSheet('sheetNotice');
+}
+function setNoticeType(type) {
+    noticeType = type;
+    ['info','alert','celebrate'].forEach(t => document.getElementById('noticeType' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === type));
+}
+async function postNotice() {
+    const title = document.getElementById('noticeTitle').value.trim();
+    const msg = document.getElementById('noticeMsg').value.trim();
+    if (!title) { showToast('Digite um título para o aviso', 'error'); return; }
+    const icons = { info: '📋', alert: '⚠️', celebrate: '🎉' };
+    const desc = `${icons[noticeType] || ''} ${title}${msg ? ': ' + msg : ''}`;
+    await addToFeed('notice', desc);
+    showToast('Aviso publicado!', 'success');
+    closeSheet('sheetNotice');
+    document.getElementById('noticeTitle').value = '';
+    document.getElementById('noticeMsg').value = '';
+}
+
+/* ============================================================
+   PRODUCTS TAB
+============================================================ */
+async function loadProductsTab() {
+    if (!currentGroupId) return;
+    await loadCategoryScroll('productCatScroll', (catId, catName) => {
+        activeProductCat = { id: catId, name: catName };
+        loadProductsList(catId);
+        document.getElementById('fabAddProduct').style.display = 'flex';
+    });
+}
+
+async function loadCategoryScroll(containerId, onSelect) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '<div class="loading-state" style="padding:6px 0;width:100%"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('categories').orderBy('name').get();
+        let html = '';
+        snap.docs.forEach((d, i) => {
+            html += `<button class="cat-chip ${i === 0 ? 'active' : ''}" onclick="selectCatChip(this,'${containerId}'); (${onSelect.toString()})('${d.id}','${d.data().name.replace(/'/g,"\\'")}')">
+                ${d.data().name}
+            </button>`;
+        });
+        html += `<button class="cat-chip add-cat" onclick="promptNewCategory()">+ Nova</button>`;
+        container.innerHTML = html;
+        // Auto-selecionar primeira
+        if (snap.docs.length > 0) {
+            const first = snap.docs[0];
+            onSelect(first.id, first.data().name);
+        }
+    } catch(e) { container.innerHTML = '<span style="font-size:0.75rem;color:var(--text-muted)">Erro ao carregar</span>'; }
+}
+
+function selectCatChip(el, containerId) {
+    document.querySelectorAll(`#${containerId} .cat-chip`).forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+}
+
+async function loadProductsList(catId) {
+    const list = document.getElementById('productsList');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('products')
+            .where('categoryId', '==', catId).where('active', '==', true).orderBy('name').get();
+        if (snap.empty) {
+            list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i><h3>Nenhum produto</h3><p>Clique no + para cadastrar o primeiro produto desta categoria</p></div>';
+            return;
+        }
+        list.innerHTML = '<div class="products-list">' + snap.docs.map(d => {
+            const p = d.data();
+            return `<div class="product-item" onclick="openProductDetail('${d.id}')">
+                <div>
+                    <div class="product-code-badge">${p.code || '—'}</div>
+                </div>
+                <div class="product-info">
+                    <div class="product-name">${p.name}</div>
+                    <div class="product-model">${p.model || ''}</div>
+                </div>
+                <div style="text-align:right">
+                    <div class="product-price">${formatBRL(p.salePrice)}</div>
+                    <div class="product-cost">Custo: ${formatBRL(p.costPrice)}</div>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    } catch(e) { list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Erro</h3><p>' + e.message + '</p></div>'; }
+}
+
+async function promptNewCategory() {
+    const name = prompt('Nome da nova categoria:');
+    if (!name || !name.trim()) return;
+    try {
+        await db.collection('groups').doc(currentGroupId).collection('categories').add({
+            name: name.trim(), createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast(`Categoria "${name.trim()}" criada!`, 'success');
+        loadProductsTab();
+        loadStockTab();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+function openAddProductSheet() {
+    // Populate category select
+    const sel = document.getElementById('addProductCat');
+    // Reload categories into select
+    db.collection('groups').doc(currentGroupId).collection('categories').orderBy('name').get().then(snap => {
+        sel.innerHTML = '<option value="">Selecionar categoria...</option>';
+        snap.docs.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.data().name;
+            if (activeProductCat && d.id === activeProductCat.id) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        sel.innerHTML += '<option value="__new__">+ Nova categoria</option>';
+    });
+    // Reset form
+    ['addProductName','addProductModel','addProductDesc'].forEach(id => document.getElementById(id).value = '');
+    ['addProductSalePrice','addProductCostPrice'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('addProductStock').value = '0';
+    document.getElementById('newCatField').style.display = 'none';
+    openSheet('sheetAddProduct');
+}
+
+function checkNewCatFromSelect(sel) {
+    document.getElementById('newCatField').style.display = sel.value === '__new__' ? 'block' : 'none';
+}
+
+async function saveProduct() {
+    let catId = document.getElementById('addProductCat').value;
+    const catNewName = document.getElementById('newCatName').value.trim();
+    const name = document.getElementById('addProductName').value.trim();
+    const model = document.getElementById('addProductModel').value.trim();
+    const salePrice = parseMoney(document.getElementById('addProductSalePrice').value);
+    const costPrice = parseMoney(document.getElementById('addProductCostPrice').value);
+    const unit = document.getElementById('addProductUnit').value;
+    const stockQty = parseInt(document.getElementById('addProductStock').value) || 0;
+    const desc = document.getElementById('addProductDesc').value.trim();
+    if (!name || !catId) { showToast('Nome e categoria são obrigatórios', 'error'); return; }
+    if (!salePrice) { showToast('Informe o preço de venda', 'error'); return; }
+    setLoading('btnSaveProduct', true);
+    try {
+        // Criar nova categoria se necessário
+        let catName = '';
+        if (catId === '__new__') {
+            if (!catNewName) { showToast('Digite o nome da nova categoria', 'error'); setLoading('btnSaveProduct', false); return; }
+            const newCat = await db.collection('groups').doc(currentGroupId).collection('categories').add({
+                name: catNewName, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            catId = newCat.id; catName = catNewName;
+        } else {
+            const catDoc = await db.collection('groups').doc(currentGroupId).collection('categories').doc(catId).get();
+            catName = catDoc.data().name;
+        }
+        // Gerar código
+        const groupDoc = await db.collection('groups').doc(currentGroupId).get();
+        const counter = (groupDoc.data().productCounter || 0) + 1;
+        await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
+        const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
+        const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
+            name, categoryId: catId, categoryName: catName,
+            salePrice, costPrice, model, description: desc, unit, code,
+            active: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: currentUser.uid
+        });
+        // Estoque inicial
+        if (stockQty > 0) {
+            await db.collection('groups').doc(currentGroupId).collection('stock').doc(prodRef.id).set({
+                quantity: stockQty, unit, productName: name, categoryName: catName,
+                categoryId: catId, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        await addToFeed('product', `Cadastrou produto: ${name} (${catName})`, { code });
+        showToast('Produto salvo!', 'success');
+        closeSheet('sheetAddProduct');
+        loadProductsTab();
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
+    } finally {
+        setLoading('btnSaveProduct', false, '<i class="fa-solid fa-floppy-disk"></i> Salvar Produto');
+    }
+}
+
+function openProductDetail(productId) {
+    // Abre detalhe do produto — futura implementação com edição
+    showToast('Em breve: editar produto', 'info');
+}
+
+/* ============================================================
+   STOCK TAB
+============================================================ */
+async function loadStockTab() {
+    if (!currentGroupId) return;
+    if (!canManageStock()) {
+        document.getElementById('stockList').innerHTML = '<div class="empty-state"><i class="fa-solid fa-lock"></i><h3>Sem permissão</h3><p>Você não tem permissão para gerenciar o estoque. Solicite ao administrador.</p></div>';
+        document.getElementById('stockCatScroll').innerHTML = '';
+        return;
+    }
+    await loadCategoryScroll('stockCatScroll', (catId, catName) => {
+        activeStockCat = { id: catId, name: catName };
+        loadStockList(catId);
+    });
+}
+
+async function loadStockList(catId) {
+    const list = document.getElementById('stockList');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const prodSnap = await db.collection('groups').doc(currentGroupId).collection('products')
+            .where('categoryId', '==', catId).where('active', '==', true).orderBy('name').get();
+        if (prodSnap.empty) {
+            list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i><h3>Nenhum produto</h3><p>Cadastre produtos nesta categoria primeiro</p></div>';
+            return;
+        }
+        // Buscar estoque de todos
+        const stockPromises = prodSnap.docs.map(d => db.collection('groups').doc(currentGroupId).collection('stock').doc(d.id).get());
+        const stockDocs = await Promise.all(stockPromises);
+        const stockMap = {};
+        stockDocs.forEach(s => { if (s.exists) stockMap[s.id] = s.data(); });
+        list.innerHTML = '<div class="stock-list">' + prodSnap.docs.map(d => {
+            const p = d.data();
+            const s = stockMap[d.id] || {};
+            const qty = s.quantity !== undefined ? s.quantity : 0;
+            const isLow = qty <= 2;
+            return `<div class="stock-item">
+                <div class="stock-qty-box ${isLow ? 'low' : ''}">
+                    <div class="stock-qty-num">${qty}</div>
+                    <div class="stock-qty-unit">${p.unit || 'un'}</div>
+                </div>
+                <div class="stock-info">
+                    <div class="stock-product-name">${p.name}</div>
+                    <div class="stock-cat">${p.model || p.categoryName || ''}</div>
+                </div>
+                <div class="stock-actions">
+                    <button class="stock-btn add-btn" onclick="openStockAdj('${d.id}','${p.name.replace(/'/g,"\\'")}','${p.model||''}',${qty},'${p.unit||'un'}','in')" title="Entrada">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                    <button class="stock-btn rem-btn" onclick="openStockAdj('${d.id}','${p.name.replace(/'/g,"\\'")}','${p.model||''}',${qty},'${p.unit||'un'}','out')" title="Saída">
+                        <i class="fa-solid fa-minus"></i>
+                    </button>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    } catch(e) { list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Erro</h3><p>' + e.message + '</p></div>'; }
+}
+
+function openStockAdj(productId, name, model, currentQty, unit, type) {
+    stockAdjProduct = { id: productId, name, model, currentQty, unit };
+    stockAdjType = type;
+    document.getElementById('stockAdjProductName').textContent = name;
+    document.getElementById('stockAdjProductModel').textContent = model;
+    document.getElementById('stockAdjCurrentQty').textContent = currentQty;
+    document.getElementById('stockAdjCurrentUnit').textContent = unit;
+    document.getElementById('adjQty').value = '';
+    document.getElementById('adjNote').value = '';
+    setAdjType(type);
+    openSheet('sheetStockAdjust');
+}
+
+function setAdjType(type) {
+    stockAdjType = type;
+    ['in','out','set'].forEach(t => {
+        const el = document.getElementById('adjType' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (el) el.classList.toggle('active', t === type);
+    });
+    const labels = { in: 'Quantidade a adicionar', out: 'Quantidade a remover', set: 'Nova quantidade total' };
+    const el = document.getElementById('adjQtyLabel');
+    if (el) el.textContent = labels[type];
+    const titleEl = document.getElementById('stockAdjustTitle');
+    if (titleEl) titleEl.textContent = { in: 'Entrada de Estoque', out: 'Saída de Estoque', set: 'Definir Estoque' }[type];
+}
+
+async function confirmStockAdj() {
+    if (!stockAdjProduct) return;
+    const qty = parseFloat(document.getElementById('adjQty').value);
+    const note = document.getElementById('adjNote').value.trim();
+    if (isNaN(qty) || qty < 0) { showToast('Informe uma quantidade válida', 'error'); return; }
+    setLoading('btnConfirmStockAdj', true);
+    try {
+        let newQty;
+        if (stockAdjType === 'in') newQty = stockAdjProduct.currentQty + qty;
+        else if (stockAdjType === 'out') newQty = Math.max(0, stockAdjProduct.currentQty - qty);
+        else newQty = qty;
+        await db.collection('groups').doc(currentGroupId).collection('stock').doc(stockAdjProduct.id).set({
+            quantity: newQty, unit: stockAdjProduct.unit,
+            productName: stockAdjProduct.name,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        const feedType = stockAdjType === 'out' ? 'stock_out' : 'stock_in';
+        const feedDesc = stockAdjType === 'set'
+            ? `Estoque de "${stockAdjProduct.name}" definido para ${newQty} ${stockAdjProduct.unit}${note ? '. ' + note : ''}`
+            : `${stockAdjType === 'in' ? 'Entrada' : 'Saída'} de ${qty} ${stockAdjProduct.unit} de "${stockAdjProduct.name}"${note ? '. ' + note : ''}`;
+        await addToFeed(feedType, feedDesc, { qty, unit: stockAdjProduct.unit });
+        showToast('Estoque atualizado!', 'success');
+        closeSheet('sheetStockAdjust');
+        loadStockList(activeStockCat.id);
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnConfirmStockAdj', false, 'Confirmar'); }
+}
+
+/* ============================================================
+   PROFILE TAB
+============================================================ */
+async function loadProfileTab() {
+    if (!currentUserData || !currentGroup) return;
+    const nick = currentUserData.nickname || currentUserData.name;
+    const initials = getInitials(nick);
+    document.getElementById('profileAvatar').textContent = initials;
+    document.getElementById('profileName').textContent = `${currentUserData.name} ${currentUserData.surname}`;
+    document.getElementById('profileEmail').textContent = currentUserData.email || currentUserData.phone || '—';
+    const role = currentMemberData ? currentMemberData.role : 'seller';
+    const rb = getRoleBadge(role);
+    document.getElementById('profileBadge').className = `profile-role-badge ${rb.cls}`;
+    document.getElementById('profileRoleText').textContent = rb.label;
+    document.getElementById('groupInfoName').textContent = currentGroup.name;
+    document.getElementById('groupInfoSeg').textContent = currentGroup.segmento || '—';
+    // Count members
+    const memSnap = await db.collection('groups').doc(currentGroupId).collection('members').get();
+    document.getElementById('groupMemberCount').textContent = memSnap.size;
+    // Count products
+    const prodSnap = await db.collection('groups').doc(currentGroupId).collection('products').where('active','==',true).get();
+    document.getElementById('groupProductCount').textContent = prodSnap.size;
+    // Invite code
+    document.getElementById('inviteCodeBig').textContent = currentGroup.code || '------';
+    // Hide manage options if not admin
+    document.getElementById('groupInfoCard').querySelector('button').style.display = isAdminOrManager() ? 'block' : 'none';
+}
+
+/* ============================================================
+   MEMBERS PAGE
+============================================================ */
+async function openMembersPage() {
+    document.getElementById('page-members').classList.add('active');
+    await loadMembersList();
+}
+function closeMembersPage() {
+    document.getElementById('page-members').classList.remove('active');
+}
+async function loadMembersList() {
+    const list = document.getElementById('membersList');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('members').get();
+        list.innerHTML = snap.docs.map(d => {
+            const m = d.data();
+            const rb = getRoleBadge(m.role);
+            const isMe = d.id === currentUser.uid;
+            const canEdit = isAdminOrManager() && !isMe;
+            const stockBadge = m.canManageStock ? ' <span style="font-size:0.6rem;color:var(--info)">· Gerencia estoque</span>' : '';
+            return `<div class="member-item">
+                <div class="member-avatar">${getInitials(m.nickname || m.name || '?')}</div>
+                <div class="member-info">
+                    <div class="member-name">${m.nickname || m.name || '?'} ${isMe ? '<span style="font-size:0.65rem;color:var(--accent)">(você)</span>' : ''}</div>
+                    <div class="member-cargo">
+                        <span class="profile-role-badge ${rb.cls}" style="font-size:0.55rem;padding:2px 6px">${rb.label}</span>
+                        ${stockBadge}
+                    </div>
+                </div>
+                ${canEdit ? `<div class="member-actions">
+                    <button class="member-action-btn" onclick="toggleMemberStock('${d.id}',${!m.canManageStock},'${m.nickname||m.name||'?'}')">
+                        ${m.canManageStock ? '🔒 Bloquear Estoque' : '📦 Dar Estoque'}
+                    </button>
+                </div>` : ''}
+            </div>`;
+        }).join('');
+    } catch(e) { list.innerHTML = '<div style="color:var(--danger);text-align:center;padding:20px;font-size:0.8rem">' + e.message + '</div>'; }
+}
+
+async function toggleMemberStock(uid, value, name) {
+    try {
+        await db.collection('groups').doc(currentGroupId).collection('members').doc(uid).update({ canManageStock: value });
+        showToast(`Permissão de estoque ${value ? 'concedida' : 'removida'} para ${name}`, 'success');
+        loadMembersList();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ============================================================
+   INVITE
+============================================================ */
+function openInviteSheet() {
+    document.getElementById('inviteCodeBig').textContent = currentGroup ? currentGroup.code || '------' : '------';
+    openSheet('sheetInvite');
+}
+function copyInviteCode() {
+    const code = currentGroup ? currentGroup.code : '';
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => showToast('Código copiado!', 'success')).catch(() => {
+        // Fallback
+        const el = document.createElement('textarea');
+        el.value = code;
+        document.body.appendChild(el);
+        el.select(); document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast('Código copiado!', 'success');
+    });
+}
+async function regenerateCode() {
+    if (!isAdminOrManager()) { showToast('Apenas admin/gerente pode fazer isso', 'error'); return; }
+    if (!confirm('Gerar novo código invalida o atual. Confirmar?')) return;
+    setLoading('btnRegenCode', true);
+    try {
+        const code = generateCode();
+        await db.collection('groups').doc(currentGroupId).update({ code });
+        currentGroup.code = code;
+        document.getElementById('inviteCodeBig').textContent = code;
+        showToast('Novo código gerado!', 'success');
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnRegenCode', false, '<i class="fa-solid fa-rotate"></i> Gerar Novo Código'); }
+}
+
+/* ============================================================
+   BOOT SEQUENCE
+============================================================ */
+function startApp() {
+    document.getElementById('group-screen').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'none';
+    // Atualizar navbar
+    if (currentGroup) {
+        document.getElementById('navGroupName').textContent = currentGroup.name;
+        document.getElementById('sideNavGroupName').textContent = currentGroup.name;
+    }
+    loadHomeData();
+    loadFeed();
+}
+
+async function runSplash(skipIntro, userNickname) {
+    const splash = document.getElementById('splash');
+    splash.style.display = 'flex';
+    if (userNickname) document.getElementById('splashNome').textContent = userNickname;
+    splash.classList.remove('phase2','phase3','phase4','exit');
+    const waitTime = skipIntro ? 1000 : 2000;
+    const minWait = new Promise(r => setTimeout(r, waitTime));
+    const phase2Delay = skipIntro ? 100 : 800;
+    setTimeout(() => splash.classList.add('phase2'), phase2Delay);
+    setTimeout(() => splash.classList.add('phase3'), phase2Delay + 200);
+    setTimeout(() => splash.classList.add('phase4'), phase2Delay + 400);
+    await minWait;
+    document.getElementById('app').classList.add('visible');
+    splash.classList.add('exit');
+    setTimeout(() => splash.style.display = 'none', 850);
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+window.addEventListener('load', () => {
+    auth.onAuthStateChanged(async user => {
+        if (user) {
+            currentUser = user;
+            // Carregar dados do usuário
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    currentUserData = userDoc.data();
+                } else {
+                    // Usuário Google sem doc
+                    currentUserData = {
+                        name: (user.displayName || '').split(' ')[0] || '',
+                        surname: (user.displayName || '').split(' ').slice(1).join(' ') || '',
+                        nickname: (user.displayName || '').split(' ')[0] || '',
+                        email: user.email, cpf: '', phone: '', cargo: '', groupId: null
+                    };
+                    await db.collection('users').doc(user.uid).set({
+                        ...currentUserData,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            } catch(e) {
+                currentUserData = { name: 'Usuário', surname: '', nickname: 'Usuário', email: user.email, groupId: null };
+            }
+            const nick = currentUserData.nickname || currentUserData.name || 'Bem-vindo';
+            // Verificar grupo
+            if (currentUserData.groupId) {
+                await loadGroup(currentUserData.groupId);
+                await runSplash(false, nick);
+                document.getElementById('auth-screen').style.display = 'none';
+                startApp();
+            } else {
+                // Sem grupo — mostrar group screen após splash rápido
+                document.getElementById('splash').style.display = 'none';
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('group-screen').style.display = 'flex';
+                showGroupOptions();
+            }
+        } else {
+            document.getElementById('splash').style.display = 'none';
+            document.getElementById('auth-screen').style.display = 'flex';
+            currentUser = null;
+            currentUserData = null;
+            currentGroup = null;
+            currentGroupId = null;
+        }
+    });
+});
+</script>
+</body>
+</html>
