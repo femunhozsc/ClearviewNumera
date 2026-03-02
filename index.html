@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <title>Clearview Numera</title>
     <link rel="apple-touch-icon" sizes="512x512" href="app-icon.png">
     <link rel="manifest" href="manifest.json">
@@ -431,6 +433,14 @@
                             <p>Compartilhe para sua equipe entrar</p>
                         </div>
                         <i class="fa-solid fa-chevron-right settings-arrow"></i>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-icon"><i class="fa-regular fa-moon"></i></div>
+                        <div class="settings-text">
+                            <h4>Modo Escuro</h4>
+                            <p>Alternar para o tema escuro</p>
+                        </div>
+                        <button class="settings-toggle" id="darkModeToggle" onclick="toggleDarkMode()"></button>
                     </div>
                     <div class="settings-item" onclick="doLogout()">
                         <div class="settings-icon" style="background:rgba(231,76,60,0.1)"><i class="fa-solid fa-right-from-bracket" style="color:var(--danger)"></i></div>
@@ -977,6 +987,7 @@ let mySalesChartInstance = null;
 let myStatsView = 'month'; // month, week, year
 let myStatsCache = { month: {v:0, c:0}, week: {v:0, c:0}, year: {v:0, c:0} };
 let myStatsInterval = null;
+let isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
 /* ============================================================
    UTILS
@@ -1133,6 +1144,25 @@ function updateDateDisplay() {
     if (isToday(appDate)) str = "Hoje, " + str;
     document.getElementById('globalDateDisplay').textContent = capitalize(str);
     document.getElementById('globalDateDisplay').style.color = isToday(appDate) ? 'var(--text-muted)' : 'var(--accent)';
+}
+
+/* ============================================================
+   THEME / DARK MODE
+============================================================ */
+function applyInitialTheme() {
+    const isDark = localStorage.getItem('darkMode') === 'true';
+    document.body.classList.toggle('dark-mode', isDark);
+    document.getElementById('darkModeToggle').classList.toggle('on', isDark);
+}
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    document.getElementById('darkModeToggle').classList.toggle('on', isDark);
+    // Re-render chart if visible to update colors
+    if (document.getElementById('page-mysales').classList.contains('active')) {
+        filterMySales(mySalesFilterType);
+    }
 }
 
 /* ============================================================
@@ -1435,17 +1465,23 @@ function initMyStatsCard() {
     card.addEventListener('touchend', e => {
         const endY = e.changedTouches[0].clientY;
         const diff = startY - endY;
-        if (diff > 30) { // Drag Up
-            cycleMyStatsView();
+        if (diff > 30) { // Drag Up (Next)
+            cycleMyStatsView('up');
             resetStatsTimer(); // Reset timer on interaction
+        } else if (diff < -30) { // Drag Down (Prev)
+            cycleMyStatsView('down');
+            resetStatsTimer();
         }
     }, {passive: true});
 
     // Mouse support for desktop testing
     card.addEventListener('mousedown', e => { startY = e.clientY; });
     card.addEventListener('mouseup', e => {
-        if (startY - e.clientY > 30) {
-            cycleMyStatsView();
+        if (startY - e.clientY > 30) { // Drag Up
+            cycleMyStatsView('up');
+            resetStatsTimer();
+        } else if (e.clientY - startY > 30) { // Drag Down
+            cycleMyStatsView('down');
             resetStatsTimer();
         }
     });
@@ -1458,14 +1494,10 @@ function startStatsTimer() {
     if (myStatsInterval) clearInterval(myStatsInterval);
     myStatsInterval = setInterval(() => {
         // Só rotaciona entre Mês e Semana automaticamente
-        if (myStatsView === 'month') {
-            myStatsView = 'week';
-            updateMyStatsCardUI(true);
-        } else if (myStatsView === 'week') {
-            myStatsView = 'month';
-            updateMyStatsCardUI(true);
-        }
-        // Se estiver em 'year', não faz nada (conforme pedido)
+        // Se estiver em 'year', não faz nada
+        if (myStatsView === 'year') return;
+        
+        cycleMyStatsView('up');
     }, 30000); // 30 segundos
 }
 
@@ -1474,16 +1506,22 @@ function resetStatsTimer() {
     startStatsTimer();
 }
 
-function cycleMyStatsView() {
+function cycleMyStatsView(direction = 'up') {
     // Cycle: Month -> Week -> Year -> Month
-    if (myStatsView === 'month') myStatsView = 'week';
-    else if (myStatsView === 'week') myStatsView = 'year';
-    else myStatsView = 'month';
+    const views = ['month', 'week', 'year'];
+    let idx = views.indexOf(myStatsView);
     
-    updateMyStatsCardUI(true);
+    if (direction === 'up') {
+        idx = (idx + 1) % views.length;
+    } else {
+        idx = (idx - 1 + views.length) % views.length;
+    }
+    
+    myStatsView = views[idx];
+    updateMyStatsCardUI(true, direction);
 }
 
-function updateMyStatsCardUI(animate) {
+function updateMyStatsCardUI(animate, direction = 'up') {
     const content = document.getElementById('myStatsContent');
     const label = content.querySelector('.stat-card-label');
     const val = document.getElementById('myDynamicSales');
@@ -1500,14 +1538,17 @@ function updateMyStatsCardUI(animate) {
     };
 
     if (animate) {
-        content.classList.add('slide-out');
+        const exitClass = direction === 'up' ? 'anim-up-exit' : 'anim-down-exit';
+        const enterClass = direction === 'up' ? 'anim-up-enter' : 'anim-down-enter';
+        
+        content.classList.add(exitClass);
         setTimeout(() => {
             render();
-            content.classList.remove('slide-out');
-            content.classList.add('slide-in');
+            content.classList.remove(exitClass);
+            content.classList.add(enterClass);
             // Force reflow
             void content.offsetWidth;
-            content.classList.remove('slide-in');
+            content.classList.remove(enterClass);
         }, 400);
     } else {
         render();
@@ -1805,6 +1846,8 @@ async function loadMySalesData(start, end) {
 
 function renderMySalesChart(data) {
     const ctx = document.getElementById('mySalesChart').getContext('2d');
+    const isDark = document.body.classList.contains('dark-mode');
+
     if (mySalesChartInstance) mySalesChartInstance.destroy();
 
     mySalesChartInstance = new Chart(ctx, {
@@ -1823,8 +1866,8 @@ function renderMySalesChart(data) {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, grid: { color: '#e8eaf0' }, ticks: { color: '#5f6368' } },
-                x: { grid: { display: false }, ticks: { color: '#5f6368', font: { size: 10 } } }
+                y: { beginAtZero: true, grid: { color: isDark ? '#333' : '#e8eaf0' }, ticks: { color: isDark ? '#888' : '#5f6368' } },
+                x: { grid: { display: false }, ticks: { color: isDark ? '#888' : '#5f6368', font: { size: 10 } } }
             }
         }
     });
@@ -2655,21 +2698,21 @@ function checkInstallApp() {
         return;
     }
     
+    // Só mostra se tiver prompt disponível (Android/PC) ou se for iOS
+    if (!isIosDevice && !deferredPrompt) return;
+
     // Injeta o card de instalação na Home se ainda não existir
     const homeInner = document.querySelector('#tab-home .page-inner');
     if (!document.getElementById('installAppCard') && homeInner) {
         const card = document.createElement('div');
         card.id = 'installAppCard';
-        card.className = 'section-card accent';
-        card.style.marginBottom = '14px';
+        card.className = 'install-card';
         card.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center">
-                <div>
-                    <div style="font-weight:600;font-size:0.9rem;margin-bottom:4px">Instalar Aplicativo</div>
-                    <div style="font-size:0.75rem;opacity:0.8">Acesse mais rápido direto da tela inicial</div>
-                </div>
-                <button class="btn-sm" onclick="installAppAction()">Instalar</button>
-            </div>`;
+            <div class="install-card-content">
+                <div class="install-card-title"><i class="fa-solid fa-cloud-arrow-down"></i> Instalar App</div>
+                <div class="install-card-desc">Acesse mais rápido e use offline</div>
+            </div>
+            <button class="btn-install" onclick="installAppAction()">Baixar</button>`;
         // Insere logo após a saudação
         const greeting = document.querySelector('.home-greeting');
         if (greeting) greeting.after(card);
@@ -2677,8 +2720,7 @@ function checkInstallApp() {
 }
 
 function installAppAction() {
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIos) {
+    if (isIosDevice) {
         openSheet('sheetInstallIOS');
     } else if (deferredPrompt) {
         deferredPrompt.prompt();
@@ -2689,7 +2731,8 @@ function installAppAction() {
             deferredPrompt = null;
         });
     } else {
-        showToast('Para instalar: Menu do navegador -> Adicionar à tela inicial', 'info');
+        // Fallback raro se o botão aparecer sem prompt
+        showToast('Instale pelo menu do navegador', 'info');
     }
 }
 
@@ -2729,6 +2772,7 @@ async function runSplash(skipIntro, userNickname) {
    INIT
 ============================================================ */
 window.addEventListener('load', () => {
+    applyInitialTheme();
     auth.onAuthStateChanged(async user => {
         if (user) {
             currentUser = user;
