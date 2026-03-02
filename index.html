@@ -278,7 +278,7 @@
                     </div>
                     <div class="stat-card" id="myStatsCard" style="position:relative; overflow:hidden; touch-action:none; user-select:none;">
                         <div id="myStatsContent" class="stat-card-content">
-                            <div class="stat-card-label"><i class="fa-regular fa-calendar"></i> Meu mês</div>
+                            <div class="stat-card-label"><i class="fa-solid fa-calendar"></i> Meu mês</div>
                             <div class="stat-card-value" id="myDynamicSales">R$ 0,00</div>
                             <div class="stat-card-sub" id="myDynamicCount">0 vendas</div>
                         </div>
@@ -1153,6 +1153,7 @@ function applyInitialTheme() {
     const isDark = localStorage.getItem('darkMode') === 'true';
     document.body.classList.toggle('dark-mode', isDark);
     document.getElementById('darkModeToggle').classList.toggle('on', isDark);
+    updateThemeColor(isDark);
 }
 
 function toggleDarkMode() {
@@ -1163,6 +1164,14 @@ function toggleDarkMode() {
     if (document.getElementById('page-mysales').classList.contains('active')) {
         filterMySales(mySalesFilterType);
     }
+    updateThemeColor(isDark);
+}
+
+function updateThemeColor(isDark) {
+    // Atualiza a cor da barra de status no mobile
+    const color = isDark ? '#0f0f0f' : '#f0f0f0';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', color);
 }
 
 /* ============================================================
@@ -1498,7 +1507,7 @@ function startStatsTimer() {
         if (myStatsView === 'year') return;
         
         cycleMyStatsView('up');
-    }, 30000); // 30 segundos
+    }, 15000); // 15 segundos
 }
 
 function resetStatsTimer() {
@@ -1532,7 +1541,7 @@ function updateMyStatsCardUI(animate, direction = 'up') {
     const icons = { month: 'fa-calendar', week: 'fa-calendar-week', year: 'fa-calendar-days' };
 
     const render = () => {
-        label.innerHTML = `<i class="fa-regular ${icons[myStatsView]}"></i> ${labels[myStatsView]}`;
+        label.innerHTML = `<i class="fa-solid ${icons[myStatsView]}"></i> ${labels[myStatsView]}`;
         val.textContent = formatBRL(data.v);
         sub.textContent = `${data.c} venda${data.c !== 1 ? 's' : ''}`;
     };
