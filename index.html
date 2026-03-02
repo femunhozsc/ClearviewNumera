@@ -556,7 +556,7 @@
             </div>
             <div class="form-field">
                 <label class="form-label">Nome do Produto</label>
-                <input type="text" id="customProductName" class="form-input" placeholder="Ex: iPhone 14 128GB Preto">
+                <input type="text" id="customProductName" class="form-input" placeholder="Ex: Produto Especial ou Serviço">
             </div>
             <div class="form-input-row">
                 <div class="form-field">
@@ -656,11 +656,11 @@
         </div>
         <div class="form-field">
             <label class="form-label">Nome do Produto</label>
-            <input type="text" id="addProductName" class="form-input" placeholder="Ex: iPhone 14">
+            <input type="text" id="addProductName" class="form-input" placeholder="Ex: Camiseta Básica, Consultoria...">
         </div>
         <div class="form-field">
             <label class="form-label">Modelo / Variante</label>
-            <input type="text" id="addProductModel" class="form-input" placeholder="Ex: 128GB, 256GB, Preto, Branco...">
+            <input type="text" id="addProductModel" class="form-input" placeholder="Ex: Tamanho M, Azul, 110v...">
         </div>
         <div class="form-input-row">
             <div class="form-field">
@@ -760,6 +760,25 @@
             <button class="btn-secondary" style="margin-top:0" onclick="regenerateCode()" id="btnRegenCode">
                 <i class="fa-solid fa-rotate"></i> Gerar Novo Código
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= SHEET: INSTALAR (iOS) ============================= -->
+<div class="sheet-overlay" id="sheetInstallIOS">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Instalar Aplicativo</span>
+            <button class="sheet-close" onclick="closeSheet('sheetInstallIOS')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="install-guide">
+            <p class="install-step">1. Toque no botão <strong>Compartilhar</strong> <i class="fa-solid fa-arrow-up-from-bracket"></i> na barra inferior do navegador.</p>
+            <div class="divider"></div>
+            <p class="install-step">2. Role para baixo e selecione <br><strong>"Adicionar à Tela de Início"</strong> <i class="fa-regular fa-square-plus"></i></p>
+            <div class="divider"></div>
+            <p class="install-step">3. Confirme clicando em <strong>Adicionar</strong>.</p>
+            <p class="install-note">Isso fará o app funcionar em tela cheia e offline.</p>
         </div>
     </div>
 </div>
@@ -865,6 +884,7 @@ let stockAdjType = 'in';
 let noticeType = 'info';
 let activeProductCat = null;
 let activeStockCat = null;
+let deferredPrompt = null; // PWA Install Prompt
 
 /* ============================================================
    UTILS
@@ -985,6 +1005,10 @@ function isAdminOrManager() {
     if (!currentMemberData) return false;
     return ['admin', 'manager'].includes(currentMemberData.role);
 }
+function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
 /* ============================================================
    AUTH
@@ -1019,8 +1043,8 @@ async function doLogin() {
 }
 
 async function doRegister() {
-    const name = document.getElementById('regName').value.trim();
-    const surname = document.getElementById('regSurname').value.trim();
+    const name = capitalize(document.getElementById('regName').value.trim());
+    const surname = capitalize(document.getElementById('regSurname').value.trim());
     const nickname = document.getElementById('regNickname').value.trim();
     const cpf = document.getElementById('regCpf').value.trim();
     const phone = document.getElementById('regPhone').value.trim();
@@ -1051,16 +1075,19 @@ async function doRegister() {
 
 async function authGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
         const res = await auth.signInWithPopup(provider);
         // Verifica se já tem doc de usuário
         const doc = await db.collection('users').doc(res.user.uid).get();
         if (!doc.exists) {
             const displayName = (res.user.displayName || '').split(' ');
+            const firstName = capitalize(displayName[0] || '');
+            const lastName = capitalize(displayName.slice(1).join(' ') || '');
             await db.collection('users').doc(res.user.uid).set({
-                name: displayName[0] || '',
-                surname: displayName.slice(1).join(' ') || '',
-                nickname: displayName[0] || '',
+                name: firstName,
+                surname: lastName,
+                nickname: firstName,
                 cpf: '', phone: '', cargo: '',
                 email: res.user.email,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1068,7 +1095,7 @@ async function authGoogle() {
             });
         }
     } catch(e) {
-        if (e.code !== 'auth/popup-closed-by-user') showToast('Erro ao entrar com Google', 'error');
+        if (e.code !== 'auth/popup-closed-by-user') showToast('Erro Google: ' + e.message, 'error');
     }
 }
 
@@ -1230,6 +1257,7 @@ async function loadHomeData() {
     document.getElementById('homeGroupName').textContent = currentGroup ? currentGroup.name : '—';
     document.getElementById('splashNome').textContent = nick;
     // Carregar vendas
+    checkInstallApp(); // Verificar se deve mostrar card de instalação
     try {
         const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales').orderBy('createdAt', 'desc').limit(200).get();
         const sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1385,13 +1413,16 @@ async function loadSaleProducts(catId) {
     const list = document.getElementById('saleProductList');
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
     try {
+        // Busca produtos do Firebase (sem orderBy para evitar erro de índice)
         const snap = await db.collection('groups').doc(currentGroupId).collection('products')
-            .where('categoryId', '==', catId).where('active', '==', true).orderBy('name').get();
+            .where('categoryId', '==', catId).where('active', '==', true).get();
         if (snap.empty) {
             list.innerHTML = '<div class="feed-empty" style="padding:24px"><i class="fa-solid fa-box-open"></i>Nenhum produto nesta categoria</div>';
             return;
         }
-        list.innerHTML = snap.docs.map(d => {
+        // Ordena os dados recebidos do Firebase alfabeticamente para exibição
+        const docs = snap.docs.sort((a, b) => (a.data().name || '').toString().localeCompare(b.data().name || ''));
+        list.innerHTML = docs.map(d => {
             const p = d.data();
             const cartItem = cart.find(c => c.productId === d.id);
             const qty = cartItem ? cartItem.qty : 0;
@@ -1610,13 +1641,16 @@ async function loadProductsList(catId) {
     const list = document.getElementById('productsList');
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
     try {
+        // Busca do Firebase
         const snap = await db.collection('groups').doc(currentGroupId).collection('products')
-            .where('categoryId', '==', catId).where('active', '==', true).orderBy('name').get();
+            .where('categoryId', '==', catId).where('active', '==', true).get();
         if (snap.empty) {
             list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i><h3>Nenhum produto</h3><p>Clique no + para cadastrar o primeiro produto desta categoria</p></div>';
             return;
         }
-        list.innerHTML = '<div class="products-list">' + snap.docs.map(d => {
+        // Ordena localmente para exibição
+        const docs = snap.docs.sort((a, b) => (a.data().name || '').toString().localeCompare(b.data().name || ''));
+        list.innerHTML = '<div class="products-list">' + docs.map(d => {
             const p = d.data();
             return `<div class="product-item" onclick="openProductDetail('${d.id}')">
                 <div>
@@ -1632,7 +1666,13 @@ async function loadProductsList(catId) {
                 </div>
             </div>`;
         }).join('') + '</div>';
-    } catch(e) { list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Erro</h3><p>' + e.message + '</p></div>'; }
+    } catch(e) { 
+        let msg = e.message;
+        if (msg.includes('requires an index')) {
+            msg = 'O sistema precisa criar um índice interno. <br><a href="' + msg.match(/https:\/\/[^ ]+/)[0] + '" target="_blank" style="color:var(--accent)">Clique aqui para criar (Admin)</a>';
+        }
+        list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Atenção</h3><p>' + msg + '</p></div>'; 
+    }
 }
 
 async function promptNewCategory() {
@@ -1756,18 +1796,21 @@ async function loadStockList(catId) {
     const list = document.getElementById('stockList');
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
     try {
+        // Busca do Firebase
         const prodSnap = await db.collection('groups').doc(currentGroupId).collection('products')
-            .where('categoryId', '==', catId).where('active', '==', true).orderBy('name').get();
+            .where('categoryId', '==', catId).where('active', '==', true).get();
         if (prodSnap.empty) {
             list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i><h3>Nenhum produto</h3><p>Cadastre produtos nesta categoria primeiro</p></div>';
             return;
         }
+        // Ordena localmente para exibição
+        const docs = prodSnap.docs.sort((a, b) => (a.data().name || '').toString().localeCompare(b.data().name || ''));
         // Buscar estoque de todos
-        const stockPromises = prodSnap.docs.map(d => db.collection('groups').doc(currentGroupId).collection('stock').doc(d.id).get());
+        const stockPromises = docs.map(d => db.collection('groups').doc(currentGroupId).collection('stock').doc(d.id).get());
         const stockDocs = await Promise.all(stockPromises);
         const stockMap = {};
         stockDocs.forEach(s => { if (s.exists) stockMap[s.id] = s.data(); });
-        list.innerHTML = '<div class="stock-list">' + prodSnap.docs.map(d => {
+        list.innerHTML = '<div class="stock-list">' + docs.map(d => {
             const p = d.data();
             const s = stockMap[d.id] || {};
             const qty = s.quantity !== undefined ? s.quantity : 0;
@@ -1956,6 +1999,59 @@ async function regenerateCode() {
         showToast('Novo código gerado!', 'success');
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
     finally { setLoading('btnRegenCode', false, '<i class="fa-solid fa-rotate"></i> Gerar Novo Código'); }
+}
+
+/* ============================================================
+   PWA INSTALL LOGIC
+============================================================ */
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    checkInstallApp();
+});
+
+function checkInstallApp() {
+    // Se já estiver em standalone (app instalado), não mostra nada
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        return;
+    }
+    
+    // Injeta o card de instalação na Home se ainda não existir
+    const homeInner = document.querySelector('#tab-home .page-inner');
+    if (!document.getElementById('installAppCard') && homeInner) {
+        const card = document.createElement('div');
+        card.id = 'installAppCard';
+        card.className = 'section-card accent';
+        card.style.marginBottom = '14px';
+        card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <div style="font-weight:600;font-size:0.9rem;margin-bottom:4px">Instalar Aplicativo</div>
+                    <div style="font-size:0.75rem;opacity:0.8">Acesse mais rápido direto da tela inicial</div>
+                </div>
+                <button class="btn-sm" onclick="installAppAction()">Instalar</button>
+            </div>`;
+        // Insere logo após a saudação
+        const greeting = document.querySelector('.home-greeting');
+        if (greeting) greeting.after(card);
+    }
+}
+
+function installAppAction() {
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIos) {
+        openSheet('sheetInstallIOS');
+    } else if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                document.getElementById('installAppCard').style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+    } else {
+        showToast('Para instalar: Menu do navegador -> Adicionar à tela inicial', 'info');
+    }
 }
 
 /* ============================================================
