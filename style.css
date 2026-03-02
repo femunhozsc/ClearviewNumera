@@ -1,3 +1,7 @@
+/* ============================================================
+   CLEARVIEW NUMERA — Design System
+   Versão empresarial • DM Sans • Dark Theme
+============================================================ */
 :root {
     --bg: #050505;
     --card-bg: #0f0f0f;
@@ -350,11 +354,11 @@ body::-webkit-scrollbar { display:none; }
 .navbar {
     position:fixed; top:0; left:0; right:0;
     background:rgba(5,5,5,0.97); backdrop-filter:blur(20px);
-    padding:18px 24px;
+    padding:16px 24px;
     display:flex; justify-content:space-between; align-items:center;
     border-bottom:1px solid var(--card-border); z-index:200;
 }
-.logo-img { height:40px; display:block; }
+.logo-img { height:44px; display:block; }
 .navbar-right { display:flex; align-items:center; gap:8px; }
 .navbar-group-name {
     font-size:0.75rem; color:var(--text-muted);
@@ -393,6 +397,7 @@ body::-webkit-scrollbar { display:none; }
 .bn-btn {
     display:flex; flex-direction:column; align-items:center;
     gap:4px; background:none; border:none; cursor:pointer;
+    flex:1;
     color:var(--text-muted); font-size:0.65rem; letter-spacing:0.5px;
     text-transform:uppercase; font-weight:500; font-family:'DM Sans',sans-serif;
     padding:4px 16px; transition:0.2s; border-radius:10px;
@@ -1109,6 +1114,25 @@ body::-webkit-scrollbar { display:none; }
 .install-step { margin-bottom:12px; font-size:0.9rem; color:var(--text-main); }
 .install-step i { color:var(--accent); margin:0 4px; font-size:1.1rem; }
 .install-note { font-size:0.75rem; color:var(--text-muted); margin-top:16px; }
+
+/* Custom Date Picker */
+#globalDateInput {
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    color: var(--text-sec);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="%23ffcc00"><path d="M152 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V48H80V24c0-13.3-10.7-24-24-24S32 10.7 32 24V48H16C7.2 48 0 55.2 0 64v48c0 8.8 7.2 16 16 16h416c8.8 0 16-7.2 16-16V64c0-8.8-7.2-16-16-16h-16V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V48h-24V24zm272 96h-416v320c0 26.5 21.5 48 48 48h320c26.5 0 48-21.5 48-48v-320z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    background-size: 1em;
+    text-align: center;
+}
+#globalDateInput:valid {
+    color: var(--text-main);
+}
+#globalDateInput::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    cursor: pointer;
+}
 
 /* Responsive */
 @media (min-width:580px) {
