@@ -32,8 +32,9 @@ body.dark-mode {
     --info: #60a5fa;
     --purple: #c084fc;
     --orange: #fb923c;
-    --accent-dim: rgba(13, 71, 161, 0.15);
-    --accent-border: rgba(13, 71, 161, 0.3);
+    --accent: #64b5f6; /* Azul mais claro para modo escuro */
+    --accent-dim: rgba(100, 181, 246, 0.15);
+    --accent-border: rgba(100, 181, 246, 0.3);
 }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'DM Sans',sans-serif; outline:none; -webkit-tap-highlight-color:transparent; }
 html { background-color: var(--bg); font-size: 19px; /* Zoom global para mobile */ }
