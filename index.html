@@ -11,6 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <!-- PDF Libs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -252,7 +255,10 @@
         <div id="tab-home" class="tab-page active">
             <div class="page-inner">
                 <div class="home-greeting">
-                    <div class="home-greeting-sub">Olá,</div>
+                    <!-- Data Picker Global -->
+                    <div class="home-greeting-sub" style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="openDatePicker()">
+                        <i class="fa-regular fa-calendar"></i> <span id="globalDateDisplay">Hoje</span> <i class="fa-solid fa-chevron-down" style="font-size:0.6rem"></i>
+                    </div>
                     <div class="home-greeting-name" id="homeGreetName">Bem-vindo(a)</div>
                     <div class="home-greeting-group">
                         <i class="fa-solid fa-building"></i>
@@ -643,6 +649,7 @@
             <span class="sheet-title">Cadastrar Produto</span>
             <button class="sheet-close" onclick="closeSheet('sheetAddProduct')"><i class="fa-solid fa-xmark"></i></button>
         </div>
+        <input type="hidden" id="editProductId" value="">
         <div class="form-field">
             <label class="form-label">Categoria</label>
             <select id="addProductCat" class="form-select" onchange="checkNewCatFromSelect(this)">
@@ -783,6 +790,20 @@
     </div>
 </div>
 
+<!-- ============================= SHEET: DATA PICKER ============================= -->
+<div class="sheet-overlay" id="sheetDatePicker">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Alterar Data de Trabalho</span>
+            <button class="sheet-close" onclick="closeSheet('sheetDatePicker')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-sec);margin-bottom:16px">Todas as vendas e movimentações serão salvas nesta data.</p>
+        <input type="date" id="globalDateInput" class="form-input" style="margin-bottom:16px;font-size:1.1rem">
+        <button class="btn-primary" onclick="setGlobalDate()">Confirmar Data</button>
+    </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -885,6 +906,7 @@ let noticeType = 'info';
 let activeProductCat = null;
 let activeStockCat = null;
 let deferredPrompt = null; // PWA Install Prompt
+let appDate = new Date(); // Data global do app
 
 /* ============================================================
    UTILS
@@ -1008,6 +1030,32 @@ function isAdminOrManager() {
 function capitalize(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+// Data Global Logic
+function openDatePicker() {
+    const inp = document.getElementById('globalDateInput');
+    inp.value = appDate.toISOString().split('T')[0];
+    openSheet('sheetDatePicker');
+}
+function setGlobalDate() {
+    const val = document.getElementById('globalDateInput').value;
+    if (!val) return;
+    // Ajustar fuso horário local
+    const parts = val.split('-');
+    appDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+    updateDateDisplay();
+    closeSheet('sheetDatePicker');
+    showToast('Data alterada para lançamentos', 'success');
+    loadHomeData(); // Recarrega stats para o mês da data selecionada se quiser, ou mantém hoje.
+    // O ideal é que o dashboard mostre dados do mês da "appDate"
+}
+function updateDateDisplay() {
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    let str = appDate.toLocaleDateString('pt-BR', options);
+    if (isToday(appDate)) str = "Hoje, " + str;
+    document.getElementById('globalDateDisplay').textContent = capitalize(str);
+    document.getElementById('globalDateDisplay').style.color = isToday(appDate) ? 'var(--text-muted)' : 'var(--accent)';
 }
 
 /* ============================================================
@@ -1256,6 +1304,7 @@ async function loadHomeData() {
     document.getElementById('homeGreetName').textContent = nick;
     document.getElementById('homeGroupName').textContent = currentGroup ? currentGroup.name : '—';
     document.getElementById('splashNome').textContent = nick;
+    updateDateDisplay();
     // Carregar vendas
     checkInstallApp(); // Verificar se deve mostrar card de instalação
     try {
@@ -1356,7 +1405,7 @@ async function addToFeed(type, description, extra = {}) {
         userName: currentUserData.name + ' ' + currentUserData.surname,
         userNickname: currentUserData.nickname,
         userId: currentUser.uid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.Timestamp.fromDate(appDate), // Usa data selecionada
         ...extra
     });
 }
@@ -1511,7 +1560,7 @@ async function confirmSale() {
             sellerName: currentUserData.name + ' ' + currentUserData.surname,
             sellerNickname: currentUserData.nickname,
             groupId: currentGroupId,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.Timestamp.fromDate(appDate) // Usa data selecionada
         };
         await db.collection('groups').doc(currentGroupId).collection('sales').add(saleData);
         // Decrementar estoque
@@ -1521,7 +1570,7 @@ async function confirmSale() {
                 const stockRef = db.collection('groups').doc(currentGroupId).collection('stock').doc(item.productId);
                 batch.set(stockRef, {
                     quantity: firebase.firestore.FieldValue.increment(-item.qty),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    updatedAt: firebase.firestore.Timestamp.fromDate(appDate)
                 }, { merge: true });
             }
         }
@@ -1706,6 +1755,7 @@ function openAddProductSheet() {
     // Reset form
     ['addProductName','addProductModel','addProductDesc'].forEach(id => document.getElementById(id).value = '');
     ['addProductSalePrice','addProductCostPrice'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('editProductId').value = ''; // Limpa ID de edição
     document.getElementById('addProductStock').value = '0';
     document.getElementById('newCatField').style.display = 'none';
     openSheet('sheetAddProduct');
@@ -1725,6 +1775,8 @@ async function saveProduct() {
     const unit = document.getElementById('addProductUnit').value;
     const stockQty = parseInt(document.getElementById('addProductStock').value) || 0;
     const desc = document.getElementById('addProductDesc').value.trim();
+    const editId = document.getElementById('editProductId').value;
+
     if (!name || !catId) { showToast('Nome e categoria são obrigatórios', 'error'); return; }
     if (!salePrice) { showToast('Informe o preço de venda', 'error'); return; }
     setLoading('btnSaveProduct', true);
@@ -1741,27 +1793,40 @@ async function saveProduct() {
             const catDoc = await db.collection('groups').doc(currentGroupId).collection('categories').doc(catId).get();
             catName = catDoc.data().name;
         }
-        // Gerar código
-        const groupDoc = await db.collection('groups').doc(currentGroupId).get();
-        const counter = (groupDoc.data().productCounter || 0) + 1;
-        await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
-        const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
-        const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
-            name, categoryId: catId, categoryName: catName,
-            salePrice, costPrice, model, description: desc, unit, code,
-            active: true,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            createdBy: currentUser.uid
-        });
-        // Estoque inicial
-        if (stockQty > 0) {
-            await db.collection('groups').doc(currentGroupId).collection('stock').doc(prodRef.id).set({
-                quantity: stockQty, unit, productName: name, categoryName: catName,
-                categoryId: catId, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
+        if (editId) {
+            // ATUALIZAR
+            await db.collection('groups').doc(currentGroupId).collection('products').doc(editId).update({
+                name, categoryId: catId, categoryName: catName,
+                salePrice, costPrice, model, description: desc, unit
             });
+            showToast('Produto atualizado!', 'success');
+            await addToFeed('product', `Atualizou produto: ${name}`);
+        } else {
+            // CRIAR NOVO
+            const groupDoc = await db.collection('groups').doc(currentGroupId).get();
+            const counter = (groupDoc.data().productCounter || 0) + 1;
+            await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
+            const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
+            
+            const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
+                name, categoryId: catId, categoryName: catName,
+                salePrice, costPrice, model, description: desc, unit, code,
+                active: true,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.uid
+            });
+            
+            // Estoque inicial
+            if (stockQty > 0) {
+                await db.collection('groups').doc(currentGroupId).collection('stock').doc(prodRef.id).set({
+                    quantity: stockQty, unit, productName: name, categoryName: catName,
+                    categoryId: catId, updatedAt: firebase.firestore.Timestamp.fromDate(appDate)
+                });
+                await addToFeed('stock_in', `Estoque inicial de ${name}`, { qty: stockQty, unit });
+            }
+            showToast('Produto salvo!', 'success');
         }
-        await addToFeed('product', `Cadastrou produto: ${name} (${catName})`, { code });
-        showToast('Produto salvo!', 'success');
         closeSheet('sheetAddProduct');
         loadProductsTab();
     } catch(e) {
@@ -1771,9 +1836,26 @@ async function saveProduct() {
     }
 }
 
-function openProductDetail(productId) {
-    // Abre detalhe do produto — futura implementação com edição
-    showToast('Em breve: editar produto', 'info');
+async function openProductDetail(productId) {
+    // Carregar dados e abrir sheet de edição
+    try {
+        const doc = await db.collection('groups').doc(currentGroupId).collection('products').doc(productId).get();
+        if (!doc.exists) return;
+        const p = doc.data();
+        
+        openAddProductSheet(); // Abre e reseta
+        document.getElementById('sheetAddProduct').querySelector('.sheet-title').textContent = 'Editar Produto';
+        document.getElementById('editProductId').value = productId;
+        document.getElementById('addProductName').value = p.name;
+        document.getElementById('addProductModel').value = p.model || '';
+        document.getElementById('addProductDesc').value = p.description || '';
+        document.getElementById('addProductSalePrice').value = (p.salePrice || 0).toFixed(2).replace('.',',');
+        document.getElementById('addProductCostPrice').value = (p.costPrice || 0).toFixed(2).replace('.',',');
+        document.getElementById('addProductUnit').value = p.unit || 'un';
+        document.getElementById('addProductCat').value = p.categoryId;
+        // Esconder estoque inicial na edição (gerenciado na aba estoque)
+        document.getElementById('addProductStock').parentElement.parentElement.style.display = 'none';
+    } catch(e) { showToast('Erro ao carregar: ' + e.message, 'error'); }
 }
 
 /* ============================================================
@@ -1877,7 +1959,7 @@ async function confirmStockAdj() {
         await db.collection('groups').doc(currentGroupId).collection('stock').doc(stockAdjProduct.id).set({
             quantity: newQty, unit: stockAdjProduct.unit,
             productName: stockAdjProduct.name,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: firebase.firestore.Timestamp.fromDate(appDate)
         }, { merge: true });
         const feedType = stockAdjType === 'out' ? 'stock_out' : 'stock_in';
         const feedDesc = stockAdjType === 'set'
@@ -1999,6 +2081,139 @@ async function regenerateCode() {
         showToast('Novo código gerado!', 'success');
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
     finally { setLoading('btnRegenCode', false, '<i class="fa-solid fa-rotate"></i> Gerar Novo Código'); }
+}
+
+/* ============================================================
+   PDF REPORT
+============================================================ */
+async function generateMonthReport() {
+    if (!currentGroupId) return;
+    showToast('Gerando relatório PDF...', 'info');
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const monthDate = appDate; // Usa a data selecionada globalmente
+    const startOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const endOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+
+    try {
+        // 1. Buscar Vendas do Mês
+        const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales')
+            .where('createdAt', '>=', startOfMonth)
+            .where('createdAt', '<=', endOfMonth)
+            .orderBy('createdAt', 'desc').get();
+        
+        const sales = salesSnap.docs.map(d => ({...d.data(), id: d.id}));
+        
+        // 2. Buscar Feed (para estoque)
+        const feedSnap = await db.collection('groups').doc(currentGroupId).collection('feed')
+            .where('createdAt', '>=', startOfMonth)
+            .where('createdAt', '<=', endOfMonth)
+            .orderBy('createdAt', 'desc').get();
+        const feed = feedSnap.docs.map(d => d.data());
+
+        // Cálculos
+        let totalSales = 0;
+        let totalCost = 0; // Estimado se tiver custo nos itens
+        const sellerStats = {};
+
+        sales.forEach(s => {
+            totalSales += s.total || 0;
+            // Agrupar por vendedor
+            if (!sellerStats[s.sellerName]) sellerStats[s.sellerName] = 0;
+            sellerStats[s.sellerName] += s.total || 0;
+            
+            // Custo (se disponível nos itens)
+            if (s.items) {
+                // Nota: O custo real precisaria estar salvo na venda. 
+                // Se não estiver, assumimos 0 ou precisaríamos buscar produtos.
+                // Para simplificar e ser rápido, vamos assumir que o lucro é calculado se tivermos dados.
+            }
+        });
+
+        // --- PDF DESIGN ---
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const logoUrl = 'logo.png'; // Tenta pegar a logo
+        try {
+            const img = document.querySelector('.logo-img') || document.querySelector('.auth-logo-img');
+            if (img) doc.addImage(img, 'PNG', 14, 10, 10, 10);
+        } catch(e) {}
+
+        doc.setFontSize(18);
+        doc.text("Relatório Mensal", 28, 16);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Clearview Numera • ${currentGroup.name}`, 28, 21);
+        doc.text(`Referência: ${monthDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})}`, 14, 30);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 30, { align: 'right' });
+
+        // Resumo Financeiro
+        doc.autoTable({
+            startY: 35,
+            head: [['Total Vendas', 'Vendas (Qtd)', 'Melhor Vendedor']],
+            body: [[
+                formatBRL(totalSales),
+                sales.length,
+                Object.entries(sellerStats).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-'
+            ]],
+            theme: 'grid',
+            headStyles: { fillColor: [255, 204, 0], textColor: [0,0,0] }
+        });
+
+        // Detalhe Vendas
+        doc.text("Detalhamento de Vendas", 14, doc.lastAutoTable.finalY + 10);
+        const salesRows = sales.map(s => [
+            s.createdAt.toDate().toLocaleDateString('pt-BR'),
+            s.items.map(i => `${i.qty}x ${i.productName}`).join(', '),
+            formatBRL(s.total),
+            s.sellerName.split(' ')[0]
+        ]);
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 12,
+            head: [['Data', 'Itens', 'Valor', 'Vendedor']],
+            body: salesRows,
+            theme: 'striped',
+            styles: { fontSize: 8 }
+        });
+
+        // Movimentações de Estoque
+        const stockMoves = feed.filter(f => f.type === 'stock_in' || f.type === 'stock_out');
+        if (stockMoves.length > 0) {
+            doc.addPage();
+            doc.text("Movimentações de Estoque", 14, 20);
+            const stockRows = stockMoves.map(f => [
+                f.createdAt.toDate().toLocaleDateString('pt-BR') + ' ' + f.createdAt.toDate().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}),
+                f.description,
+                f.userName
+            ]);
+            doc.autoTable({
+                startY: 25,
+                head: [['Data/Hora', 'Descrição', 'Usuário']],
+                body: stockRows,
+                theme: 'striped'
+            });
+        }
+
+        // Salvar/Compartilhar
+        const pdfBlob = doc.output('blob');
+        const fileName = `Relatorio_${currentGroup.name}_${monthDate.getMonth()+1}_${monthDate.getFullYear()}.pdf`;
+        
+        if (navigator.share) {
+            const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+            navigator.share({
+                files: [file],
+                title: 'Relatório Mensal',
+                text: 'Segue relatório gerado pelo Clearview Numera.'
+            }).catch(e => doc.save(fileName));
+        } else {
+            doc.save(fileName);
+        }
+        showToast('Relatório gerado!', 'success');
+
+    } catch(e) {
+        console.error(e);
+        showToast('Erro ao gerar PDF: ' + e.message, 'error');
+    }
 }
 
 /* ============================================================
