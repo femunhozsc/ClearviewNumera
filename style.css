@@ -1,4 +1,7 @@
-
+/* ============================================================
+   CLEARVIEW NUMERA — Design System
+   Versão empresarial • DM Sans • Dark Theme
+============================================================ */
 :root {
     --bg: #050505;
     --card-bg: #0f0f0f;
@@ -421,9 +424,14 @@ body::-webkit-scrollbar { display:none; }
     padding:4px 0 16px;
 }
 .home-greeting-sub {
-    font-size:0.7rem; color:var(--text-muted); letter-spacing:1px;
-    text-transform:uppercase; margin-bottom:4px;
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,0.03); border:1px solid var(--card-border);
+    padding:8px 16px; border-radius:24px;
+    font-size:0.85rem; color:var(--accent); font-weight:500;
+    cursor:pointer; margin-bottom:12px; transition:0.2s;
 }
+.home-greeting-sub:active { transform:scale(0.96); background:var(--accent-dim); border-color:var(--accent-border); }
+.home-greeting-sub i { color:var(--text-muted); }
 .home-greeting-name {
     font-size:1.5rem; font-weight:600; letter-spacing:-0.3px;
 }
@@ -1121,7 +1129,7 @@ body::-webkit-scrollbar { display:none; }
     background-repeat: no-repeat;
     background-position: right 18px center;
     background-size: 1em;
-    text-align: center;
+    text-align: left;
 }
 #globalDateInput:valid {
     color: var(--text-main);
