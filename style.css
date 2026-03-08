@@ -513,6 +513,10 @@ body.dark-mode .bottom-nav {
     border-color:var(--accent-border);
 }
 .stat-box.highlight .stat-box-value { color:var(--accent); }
+.stat-box.highlight-blue {
+    border: 1px solid var(--accent);
+}
+.stat-box.highlight-blue .stat-box-value { color: var(--accent); }
 
 /* Chart Section */
 .chart-section {
