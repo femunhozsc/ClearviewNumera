@@ -532,7 +532,10 @@ body.dark-mode .bottom-nav {
     border-radius:6px; cursor:pointer; transition:0.2s;
 }
 .chart-toggle-btn.active { background:var(--card-bg); color:var(--text-main); box-shadow:0 2px 5px rgba(0,0,0,0.05); }
-.chart-container { position:relative; height:180px; width:100%; }
+.chart-container { 
+    position:relative; height:150px; width:100%; 
+    background: linear-gradient(to bottom, transparent 95%, rgba(0,0,0,0.02) 100%); /* Marcação sutil da base */
+}
 .chart-summary {
     display:grid; grid-template-columns:repeat(4, 1fr);
     gap:8px; margin-top:16px; padding-top:16px;
@@ -658,6 +661,13 @@ body.dark-mode .bottom-nav {
     color:var(--text-muted); font-size:0.82rem;
 }
 .feed-empty i { font-size:1.8rem; display:block; margin-bottom:10px; opacity:0.4; }
+.feed-load-more {
+    width:100%; padding:12px; margin-top:10px;
+    background:var(--card-bg); border:1px solid var(--card-border);
+    color:var(--accent); font-size:0.8rem; font-weight:600;
+    border-radius:12px; cursor:pointer; transition:0.2s;
+}
+.feed-load-more:active { background:var(--bg); }
 
 /* ============================================================
    PRODUCTS TAB
