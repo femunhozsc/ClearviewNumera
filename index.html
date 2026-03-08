@@ -257,41 +257,51 @@
         <!-- ===== TAB: HOME ===== -->
         <div id="tab-home" class="tab-page active">
             <div class="page-inner">
-                <div class="home-greeting">
-                    <!-- Data Picker Global -->
-                    <div class="home-greeting-sub" onclick="openDatePicker()">
-                        <i class="fa-regular fa-calendar"></i> <span id="globalDateDisplay">Hoje</span> <i class="fa-solid fa-chevron-down" style="font-size:0.6rem"></i>
+                <!-- Header Minimalista -->
+                <div class="home-header">
+                    <div>
+                        <div class="home-greeting-name" id="homeGreetName">Olá</div>
+                        <div class="home-greeting-group" id="homeGroupName">—</div>
                     </div>
-                    <div class="home-greeting-name" id="homeGreetName">Bem-vindo(a)</div>
-                    <div class="home-greeting-group">
-                        <i class="fa-solid fa-building"></i>
-                        <span id="homeGroupName">—</span>
+                    <div class="date-selector-minimal" onclick="openDatePicker()">
+                        <i class="fa-regular fa-calendar"></i> <span id="globalDateDisplay">08/03/2026</span>
                     </div>
                 </div>
 
-                <!-- Stats pessoais -->
-                <div class="stats-row" id="homeStats">
-                    <div class="stat-card" onclick="openMySalesDashboard()" style="cursor:pointer">
-                        <div class="stat-card-label"><i class="fa-solid fa-circle-user"></i> Minhas vendas hoje</div>
-                        <div class="stat-card-value success" id="myDaySales">R$ 0,00</div>
-                        <div class="stat-card-sub" id="myDayCount">0 vendas</div>
-                    </div>
-                    <div class="stat-card" id="myStatsCard" style="position:relative; overflow:hidden; touch-action:none; user-select:none;">
-                        <div id="myStatsContent" class="stat-card-content">
-                            <div class="stat-card-label"><i class="fa-solid fa-calendar"></i> Meu mês</div>
-                            <div class="stat-card-value" id="myDynamicSales">R$ 0,00</div>
-                            <div class="stat-card-sub" id="myDynamicCount">0 vendas</div>
+                <!-- Gráfico Horizontal -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <div class="section-label" style="margin:0">Desempenho</div>
+                        <div class="chart-toggle">
+                            <button class="chart-toggle-btn active" id="chartBtnWeek" onclick="setHomeChart('week')">Semana</button>
+                            <button class="chart-toggle-btn" id="chartBtnMonth" onclick="setHomeChart('month')">Mês</button>
                         </div>
                     </div>
-                    <div class="stat-card wide accent">
-                        <div>
-                            <div class="stat-card-label"><i class="fa-solid fa-building"></i> Grupo hoje</div>
-                            <div class="stat-card-value" id="groupDaySales">R$ 0,00</div>
-                        </div>
-                        <div style="text-align:right">
-                            <div class="stat-card-label">Este mês</div>
-                            <div class="stat-card-value" id="groupMonthSales">R$ 0,00</div>
-                        </div>
+                    <div class="chart-container">
+                        <canvas id="homeMainChart"></canvas>
+                    </div>
+                    <div class="chart-summary" id="chartSummary">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+
+                <!-- Stats Modulares -->
+                <div class="stats-grid">
+                    <div class="stat-box" onclick="openMySalesDashboard()" style="cursor:pointer">
+                        <div class="stat-box-label"><i class="fa-solid fa-user"></i> Minhas Hoje</div>
+                        <div class="stat-box-value" id="myDaySales">R$ 0,00</div>
+                    </div>
+                    <div class="stat-box highlight">
+                        <div class="stat-box-label"><i class="fa-solid fa-calendar-check"></i> Meu Ano</div>
+                        <div class="stat-box-value" id="myYearSales">R$ 0,00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label"><i class="fa-solid fa-building"></i> Grupo Hoje</div>
+                        <div class="stat-box-value" id="groupDaySales">R$ 0,00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label"><i class="fa-solid fa-chart-pie"></i> Grupo Mês</div>
+                        <div class="stat-box-value" id="groupMonthSales">R$ 0,00</div>
                     </div>
                 </div>
 
@@ -881,6 +891,15 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- URGENT POPUP -->
+<div class="urgent-popup" id="urgentPopup">
+    <div class="urgent-header"><i class="fa-solid fa-triangle-exclamation"></i> AVISO URGENTE</div>
+    <div class="urgent-text" id="urgentPopupText"></div>
+    <button class="urgent-btn" onclick="document.getElementById('urgentPopup').classList.remove('active')">
+        Entendido
+    </button>
+</div>
+
 <!-- ============================= FIREBASE + JS ============================= -->
 <!-- Firebase SDK Compat -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -988,6 +1007,8 @@ let myStatsView = 'month'; // month, week, year
 let myStatsCache = { month: {v:0, c:0}, week: {v:0, c:0}, year: {v:0, c:0} };
 let myStatsInterval = null;
 let isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+let homeChartInstance = null;
+let homeChartData = { week: [], month: [] }; // Cache para o gráfico
 
 /* ============================================================
    UTILS
@@ -1139,10 +1160,8 @@ function setGlobalDate() {
     // O ideal é que o dashboard mostre dados do mês da "appDate"
 }
 function updateDateDisplay() {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    let str = appDate.toLocaleDateString('pt-BR', options);
-    if (isToday(appDate)) str = "Hoje, " + str;
-    document.getElementById('globalDateDisplay').textContent = capitalize(str);
+    // Formato (icone) 08/03/2026
+    document.getElementById('globalDateDisplay').textContent = appDate.toLocaleDateString('pt-BR');
     document.getElementById('globalDateDisplay').style.color = isToday(appDate) ? 'var(--text-muted)' : 'var(--accent)';
 }
 
@@ -1418,13 +1437,14 @@ async function loadHomeData() {
     // Atualizar saudações
     const nick = currentUserData.nickname || currentUserData.name;
     document.getElementById('homeGreetName').textContent = `Olá, ${nick}`;
-    document.getElementById('homeGroupName').textContent = currentGroup ? currentGroup.name : '—';
+    document.getElementById('homeGroupName').textContent = currentGroup ? currentGroup.name : '';
     document.getElementById('splashNome').textContent = nick;
     updateDateDisplay();
     // Carregar vendas
     checkInstallApp(); // Verificar se deve mostrar card de instalação
     try {
-        const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales').orderBy('createdAt', 'desc').limit(200).get();
+        // Aumentado limite para popular gráfico anual
+        const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales').orderBy('createdAt', 'desc').limit(1000).get();
         const sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         // My stats
         const mySales = sales.filter(s => s.sellerId === currentUser.uid);
@@ -1434,20 +1454,15 @@ async function loadHomeData() {
         const myYear = mySales.filter(s => isThisYear(s.createdAt));
 
         const myTodayTotal = myToday.reduce((a, s) => a + (s.total || 0), 0);
+        const myYearTotal = myYear.reduce((a, s) => a + (s.total || 0), 0);
         
-        // Cache stats for the dynamic card
-        myStatsCache.week = { v: myWeek.reduce((a, s) => a + (s.total || 0), 0), c: myWeek.length };
-        myStatsCache.month = { v: myMonth.reduce((a, s) => a + (s.total || 0), 0), c: myMonth.length };
-        myStatsCache.year = { v: myYear.reduce((a, s) => a + (s.total || 0), 0), c: myYear.length };
-
         document.getElementById('myDaySales').textContent = formatBRL(myTodayTotal);
-        document.getElementById('myDayCount').textContent = `${myToday.length} venda${myToday.length !== 1 ? 's' : ''}`;
+        document.getElementById('myYearSales').textContent = formatBRL(myYearTotal);
         
-        // Initialize dynamic card
-        initMyStatsCard();
-        updateMyStatsCardUI(false); // Update without animation first time
+        // Processar dados para o gráfico
+        processHomeChartData(mySales);
 
-        // Group stats
+        // Group stats (Modular boxes)
         const groupToday = sales.filter(s => isToday(s.createdAt));
         const groupMonth = sales.filter(s => isThisMonth(s.createdAt));
         document.getElementById('groupDaySales').textContent = formatBRL(groupToday.reduce((a, s) => a + (s.total || 0), 0));
@@ -1626,6 +1641,14 @@ function loadFeed(forceRefresh = false) {
             
             const docs = snap.docs.map(d => d.data());
             let html = '';
+            
+            // Check Urgent Notice (Popup)
+            if (docs.length > 0 && docs[0].type === 'alert') {
+                // Verifica se é recente (última hora) para não spammar
+                const diff = (new Date() - docs[0].createdAt.toDate()) / 1000 / 60;
+                if (diff < 60) showUrgentPopup(docs[0].description);
+            }
+
             let lastHeader = '';
 
             docs.forEach(d => {
@@ -1661,6 +1684,11 @@ function loadFeed(forceRefresh = false) {
             console.error(err);
             list.innerHTML = '<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>Erro ao carregar atividades</div>';
         });
+}
+
+function showUrgentPopup(text) {
+    document.getElementById('urgentPopupText').textContent = text.replace('⚠️ ', '');
+    document.getElementById('urgentPopup').classList.add('active');
 }
 
 function renderFeedItem(data) {
