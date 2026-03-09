@@ -434,7 +434,7 @@
                             <i class="fa-solid fa-circle-check"></i> <span id="profileRoleText">Membro</span>
                         </div>
                     </div>
-                    <button class="navbar-btn" style="margin-left:auto; background:var(--bg); width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:10px;" onclick="openEditProfile()"><i class="fa-solid fa-pen-to-square" style="color:var(--accent)"></i></button>
+                    <button class="navbar-btn" style="position:absolute; right:18px; top:50%; transform:translateY(-50%); background:var(--bg); width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:10px;" onclick="openEditProfile()"><i class="fa-solid fa-pen-to-square" style="color:var(--accent)"></i></button>
                 </div>
 
                 <!-- Grupo info -->
@@ -674,13 +674,25 @@
             <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem"></i>
         </div>
 
-        <div class="section-label" style="margin-top:24px">Custos Fixos / Operacionais <button class="section-label-btn" onclick="openCostManager('fixed')"><i class="fa-solid fa-plus"></i> Adicionar</button></div>
-        <div id="fixedCostsList" class="costs-list"></div>
-        <div class="fin-total-costs">Total Custos Fixos: <span id="finTotalFixed">R$ 0,00</span></div>
+        <!-- Custos Fixos -->
+        <div class="section-card">
+            <div class="section-card-title">
+                <span>Custos Fixos</span>
+                <button onclick="openCostManager('fixed')"><i class="fa-solid fa-plus"></i> Adicionar</button>
+            </div>
+            <div id="fixedCostsList" class="costs-list"></div>
+            <div class="fin-total-costs">Total: <span id="finTotalFixed">R$ 0,00</span></div>
+        </div>
 
-        <div class="section-label" style="margin-top:24px">Custos Variáveis (Extras) <button class="section-label-btn" onclick="openCostManager('variable')"><i class="fa-solid fa-plus"></i> Adicionar</button></div>
-        <div id="variableCostsList" class="costs-list"></div>
-        <div class="fin-total-costs">Total Custos Variáveis: <span id="finTotalVariable">R$ 0,00</span></div>
+        <!-- Custos Variáveis -->
+        <div class="section-card">
+            <div class="section-card-title">
+                <span>Custos Variáveis (Mês)</span>
+                <button onclick="openCostManager('variable')"><i class="fa-solid fa-plus"></i> Adicionar</button>
+            </div>
+            <div id="variableCostsList" class="costs-list"></div>
+            <div class="fin-total-costs">Total: <span id="finTotalVariable">R$ 0,00</span></div>
+        </div>
     </div>
 </div>
 
@@ -1124,7 +1136,7 @@
             <label class="form-label">Valor (R$)</label>
             <input type="text" id="costValueInput" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
         </div>
-        <button class="btn-primary" onclick="saveCost()"><i class="fa-solid fa-check"></i> Salvar Custo</button>
+        <button class="btn-primary" onclick="saveCost()" id="btnSaveCost"><i class="fa-solid fa-check"></i> Salvar Custo</button>
         <button class="btn-danger" id="btnDeleteCost" onclick="deleteCost()" style="margin-top:12px; display:none;"><i class="fa-solid fa-trash-can"></i> Excluir Custo</button>
     </div>
 </div>
@@ -2205,6 +2217,7 @@ function setHomeChart(period) {
                 borderRadius: period === 'month' ? 2 : 5,
                 borderSkipped: false,
                 barPercentage: period === 'month' ? 0.9 : 0.65,
+                minBarLength: 6,
             }]
         },
         options: {
@@ -3644,7 +3657,6 @@ async function loadAdminDashboard() {
         const settingsDoc = await db.collection('groups').doc(currentGroupId).collection('settings').doc('costs').get();
         if (settingsDoc.exists) {
             adminDashFixedCosts = settingsDoc.data().fixed_items || [];
-            adminDashVariableCosts = settingsDoc.data().variable_items || [];
         } else {
             adminDashFixedCosts = []; 
         }
@@ -3831,35 +3843,43 @@ async function saveCost() {
         return;
     }
 
-    if (type === 'fixed') {
-        // FIXED COSTS (Settings)
-        if (index > -1) adminDashFixedCosts[index] = { name, value };
-        else adminDashFixedCosts.push({ name, value });
-        
-        await db.collection('groups').doc(currentGroupId).collection('settings').doc('costs').set({
-            fixed_items: adminDashFixedCosts
-        }, { merge: true });
+    setLoading('btnSaveCost', true);
+    try {
+        if (type === 'fixed') {
+            // FIXED COSTS (Settings)
+            if (index > -1) adminDashFixedCosts[index] = { name, value };
+            else adminDashFixedCosts.push({ name, value });
+            
+            await db.collection('groups').doc(currentGroupId).collection('settings').doc('costs').set({
+                fixed_items: adminDashFixedCosts
+            }, { merge: true });
 
-    } else {
-        // VARIABLE COSTS (Expenses Collection)
-        const dateObj = dateVal ? new Date(dateVal + 'T12:00:00') : appDate;
-        const expenseData = {
-            name, value,
-            date: firebase.firestore.Timestamp.fromDate(dateObj),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        if (index > -1) {
-            const id = adminDashVariableCosts[index].id;
-            await db.collection('groups').doc(currentGroupId).collection('expenses').doc(id).update(expenseData);
         } else {
-            await db.collection('groups').doc(currentGroupId).collection('expenses').add(expenseData);
-        }
-    }
+            // VARIABLE COSTS (Expenses Collection)
+            const dateObj = dateVal ? new Date(dateVal + 'T12:00:00') : appDate;
+            const expenseData = {
+                name, value,
+                date: firebase.firestore.Timestamp.fromDate(dateObj),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
 
-    loadAdminDashboard();
-    closeSheet('sheet-cost-manager');
-    showToast('Custo salvo com sucesso!', 'success');
+            if (index > -1) {
+                const id = adminDashVariableCosts[index].id;
+                await db.collection('groups').doc(currentGroupId).collection('expenses').doc(id).update(expenseData);
+            } else {
+                await db.collection('groups').doc(currentGroupId).collection('expenses').add(expenseData);
+            }
+        }
+
+        loadAdminDashboard();
+        closeSheet('sheet-cost-manager');
+        showToast('Custo salvo com sucesso!', 'success');
+    } catch(e) {
+        console.error(e);
+        showToast('Erro ao salvar: ' + e.message, 'error');
+    } finally {
+        setLoading('btnSaveCost', false, '<i class="fa-solid fa-check"></i> Salvar Custo');
+    }
 }
 
 async function deleteCost() {
