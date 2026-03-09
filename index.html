@@ -610,14 +610,18 @@
             <button class="btn-primary" style="width:auto;padding:10px 14px;margin:0" onclick="applyCustomSalesFilter()"><i class="fa-solid fa-check"></i></button>
         </div>
         <!-- Summary -->
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-card-label">Total Vendido (Período)</div>
-                <div class="stat-card-value success" id="dashMyTotal">R$ 0,00</div>
+        <div class="mydash-summary-grid">
+            <div class="mydash-stat-card main">
+                <div class="mydash-stat-label">Total Vendido</div>
+                <div class="mydash-stat-value" id="dashMyTotal">R$ 0,00</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-card-label">Total Vendas</div>
-                <div class="stat-card-value" id="dashMyCount">0</div>
+            <div class="mydash-stat-card">
+                <div class="mydash-stat-label">Nº de Vendas</div>
+                <div class="mydash-stat-value" id="dashMyCount">0</div>
+            </div>
+            <div class="mydash-stat-card">
+                <div class="mydash-stat-label">Ticket Médio</div>
+                <div class="mydash-stat-value" id="dashMyAvg">R$ 0,00</div>
             </div>
         </div>
         <!-- Chart -->
@@ -964,7 +968,7 @@
     <div class="sheet-content">
         <div class="sheet-handle"></div>
         <div class="sheet-header">
-            <span class="sheet-title">🎯 Minha Meta Mensal</span>
+            <span class="sheet-title"><i class="fa-solid fa-bullseye"></i> Minha Meta Mensal</span>
             <button class="sheet-close" onclick="closeSheet('sheetGoal')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <p style="font-size:0.82rem;color:var(--text-sec);margin-bottom:20px;line-height:1.5">
@@ -1009,7 +1013,7 @@
     <div class="sheet-content">
         <div class="sheet-handle"></div>
         <div class="sheet-header">
-            <span class="sheet-title">📅 Novo Lembrete</span>
+            <span class="sheet-title"><i class="fa-solid fa-calendar-plus"></i> Novo Lembrete</span>
             <button class="sheet-close" onclick="closeSheet('sheetAddReminder')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="form-field">
@@ -1173,6 +1177,16 @@ function parseMoney(str) {
     if (!str) return 0;
     return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
 }
+function formatK(val) {
+    if (!val && val !== 0) return 'R$ 0';
+    if (val >= 1000000) {
+        return 'R$' + (val / 1000000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M';
+    }
+    if (val >= 1000) {
+        return 'R$' + (val / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'k';
+    }
+    return formatBRL(val);
+}
 function maskMoney(el) {
     let v = el.value.replace(/\D/g, '');
     v = (parseInt(v, 10) / 100).toFixed(2);
@@ -1315,6 +1329,13 @@ function updateDateDisplay() {
     // Formato (icone) 08/03/2026
     document.getElementById('globalDateDisplay').textContent = appDate.toLocaleDateString('pt-BR');
     document.getElementById('globalDateDisplay').style.color = isToday(appDate) ? 'var(--text-muted)' : 'var(--accent)';
+}
+
+function showValueToast(el) {
+    const fullValue = el.dataset.fullValue;
+    if (fullValue) {
+        showToast(fullValue, 'info');
+    }
 }
 
 /* ============================================================
@@ -1977,9 +1998,9 @@ function renderChartSummary(period, values, data) {
     const maxLabel = max > 0 ? (data[values.indexOf(max)]?.label || '—') : '—';
     const periodLabels = { week: 'Semana', month: 'Mês', year: 'Ano' };
     sum.innerHTML = `
-        <div class="c-sum-item"><div class="c-sum-label">Total ${periodLabels[period]}</div><div class="c-sum-val">${formatBRL(total)}</div></div>
-        <div class="c-sum-item"><div class="c-sum-label">Média</div><div class="c-sum-val">${formatBRL(avg)}</div></div>
-        <div class="c-sum-item"><div class="c-sum-label">Melhor</div><div class="c-sum-val" style="color:var(--success)">${formatBRL(max)}</div></div>
+        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label">${periodLabels[period]}</div><div class="c-sum-val" data-full-value="${formatBRL(total)}">${formatK(total)}</div></div>
+        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label">Média</div><div class="c-sum-val" data-full-value="${formatBRL(avg)}">${formatK(avg)}</div></div>
+        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label">Melhor</div><div class="c-sum-val" style="color:var(--success)" data-full-value="${formatBRL(max)}">${formatK(max)}</div></div>
         <div class="c-sum-item"><div class="c-sum-label">Pico</div><div class="c-sum-val">${maxLabel}</div></div>`;
 }
 
@@ -2040,6 +2061,7 @@ function renderFeedItem(data) {
         stock_out: { icon: 'fa-box-arrow-up', cls: 'stock-out' },
         notice: { icon: 'fa-bullhorn', cls: 'notice' },
         alert: { icon: 'fa-triangle-exclamation', cls: 'alert-notice' },
+        celebrate: { icon: 'fa-solid fa-star', cls: 'celebrate' },
         product: { icon: 'fa-tag', cls: 'product' },
     };
     const t = typeMap[data.type] || typeMap.notice;
@@ -2177,6 +2199,8 @@ async function loadMySalesData(start, end) {
         const totalVal = sales.reduce((a, s) => a + (s.total || 0), 0);
         document.getElementById('dashMyTotal').textContent = formatBRL(totalVal);
         document.getElementById('dashMyCount').textContent = sales.length;
+        const avgTicket = totalVal > 0 && sales.length > 0 ? totalVal / sales.length : 0;
+        document.getElementById('dashMyAvg').textContent = formatBRL(avgTicket);
         
         // Atualizar label do período
         const labelTotal = document.querySelector('#page-mysales .stat-card-label');
@@ -2490,10 +2514,9 @@ async function postNotice() {
     const title = document.getElementById('noticeTitle').value.trim();
     const msg = document.getElementById('noticeMsg').value.trim();
     if (!title) { showToast('Digite um título para o aviso', 'error'); return; }
-    const icons = { info: '', alert: '⚠️', celebrate: '🎉' };
-    const desc = `${icons[noticeType] || ''} ${title}${msg ? ': ' + msg : ''}`;
+    const desc = `${title}${msg ? ': ' + msg : ''}`;
     // Use 'alert' type for urgent so the popup triggers correctly
-    const feedType = noticeType === 'alert' ? 'alert' : 'notice';
+    const feedType = noticeType === 'info' ? 'notice' : noticeType;
     await addToFeed(feedType, desc);
     showToast('Aviso publicado!', 'success');
     closeSheet('sheetNotice');
@@ -3130,7 +3153,7 @@ async function saveGoal() {
     try {
         await db.collection('groups').doc(currentGroupId).collection('members').doc(currentUser.uid).update({ monthlyGoal: val });
         if (currentMemberData) currentMemberData.monthlyGoal = val;
-        showToast('Meta definida! 🎯', 'success');
+        showToast('Meta definida!', 'success');
         closeSheet('sheetGoal');
         loadGoalCard();
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
@@ -3197,7 +3220,6 @@ async function loadRankingData() {
         }
 
         // Animated podium — visual order: 2nd | 1st | 3rd
-        const medals = ['🥇','🥈','🥉'];
         const blockH = ['100px','78px','62px']; // heights for rank 1,2,3
         const visualOrder = sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] :
                             sorted.length === 2 ? [sorted[1], sorted[0], null] : [null, sorted[0], null];
@@ -3208,7 +3230,9 @@ async function loadRankingData() {
             const rank = visualRanks[vi];
             const isMe = s.id === currentUser.uid;
             return `<div class="podium-col rank-${rank}${isMe?' is-me':''}">
-                <div class="podium-medal">${medals[rank-1]}</div>
+                <div class="podium-medal">
+                    <i class="fa-solid fa-medal"></i>
+                </div>
                 <div class="podium-avatar-wrap"><div class="podium-avatar">${getInitials(s.name)}</div></div>
                 <div class="podium-name">${s.name}${isMe?'<br><span style="font-size:0.55rem;opacity:0.7">você</span>':''}</div>
                 <div class="podium-val">${formatBRL(s.total)}</div>
@@ -3226,9 +3250,10 @@ async function loadRankingData() {
         // Full list
         fullList.innerHTML = `<div class="ranking-list">` + sorted.map((s, i) => {
             const isMe = s.id === currentUser.uid;
-            const podiumIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+            const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+            const podiumIcon = i < 3 ? `<i class="fa-solid fa-medal" style="color:${medalColors[i]}"></i>` : (i + 1);
             return `<div class="ranking-row${isMe?' me':''}">
-                <div class="ranking-pos-num${i < 3?' top':''}">${podiumIcon || (i+1)}</div>
+                <div class="ranking-pos-num${i < 3?' top':''}">${podiumIcon}</div>
                 <div class="ranking-avatar-sm">${getInitials(s.name)}</div>
                 <div class="ranking-info">
                     <div class="ranking-name">${s.name} ${isMe?'<span class="ranking-me-badge">você</span>':''}</div>
@@ -3412,7 +3437,7 @@ async function saveReminder() {
             createdByNickname: currentUserData.nickname,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        showToast('Lembrete criado! 📅', 'success');
+        showToast('Lembrete criado!', 'success');
         closeSheet('sheetAddReminder');
         loadReminders();
     } catch(e) { showToast('Erro: '+e.message, 'error'); }

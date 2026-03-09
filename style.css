@@ -620,7 +620,7 @@ body.dark-mode .chart-section { box-shadow:0 2px 16px rgba(0,0,0,0.2); }
     box-shadow:0 2px 6px rgba(0,0,0,0.07);
 }
 .chart-container { 
-    position:relative; height:160px; width:100%;
+    position:relative; height:140px; width:100%;
 }
 .chart-empty-msg {
     position:absolute; inset:0; display:flex; align-items:center;
@@ -779,6 +779,7 @@ body.dark-mode .chart-section { box-shadow:0 2px 16px rgba(0,0,0,0.2); }
 .feed-icon.notice { background:rgba(143, 80, 255, 0.1); color:var(--purple); }
 .feed-icon.product { background:var(--accent-dim); color:var(--accent); }
 .feed-icon.alert-notice { background:rgba(217,48,37,0.1); color:var(--danger); }
+.feed-icon.celebrate { background:rgba(241, 196, 15, 0.1); color:#f1c40f; }
 .feed-body { flex:1; min-width:0; }
 .feed-who {
     font-size:0.7rem; font-weight:600; color:var(--text-main);
@@ -1620,6 +1621,9 @@ footer {
 .podium-col.rank-empty { opacity:0.2; }
 .podium-col.is-me .podium-avatar { border:2px solid var(--accent); }
 .podium-medal { font-size:1.4rem; margin-bottom:4px; }
+.podium-col.rank-1 .podium-medal { color: #FFD700; }
+.podium-col.rank-2 .podium-medal { color: #C0C0C0; }
+.podium-col.rank-3 .podium-medal { color: #CD7F32; }
 .podium-avatar-wrap { position:relative; }
 .podium-avatar {
     width:48px; height:48px; border-radius:50%;
@@ -1667,6 +1671,7 @@ footer {
     min-width:26px; text-align:center; font-style:italic;
 }
 .ranking-pos-num.top { font-size:1.1rem; }
+.ranking-pos-num.top i { vertical-align: middle; }
 .ranking-avatar-sm {
     width:36px; height:36px; border-radius:50%;
     background:var(--bg); border:1px solid var(--card-border);
@@ -1764,6 +1769,50 @@ footer {
     transition:0.2s;
 }
 .comment-send-btn:active { opacity:0.8; transform:scale(0.92); }
+
+/* ============================================================
+   MEU DASHBOARD STYLES
+============================================================ */
+#page-mysales .page-slide-body {
+    padding-top: 12px;
+}
+.mydash-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.mydash-stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px;
+}
+.mydash-stat-card.main {
+    grid-column: span 2;
+    background: linear-gradient(135deg, var(--accent-dim) 0%, rgba(13,71,161,0.04) 100%);
+    border-color: var(--accent-border);
+}
+.mydash-stat-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.mydash-stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.mydash-stat-card.main .mydash-stat-value {
+    color: var(--accent);
+    font-size: 1.8rem;
+}
+#page-mysales .section-card {
+    margin-bottom: 20px;
+}
+#page-mysales .section-label {
+    margin-top: 20px;
+}
 
 /* ============================================================
    🌙 AGENDA / LEMBRETES
