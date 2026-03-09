@@ -1016,7 +1016,7 @@ body.dark-mode .chart-section { box-shadow:0 2px 16px rgba(0,0,0,0.2); }
 ============================================================ */
 .sheet-overlay {
     position:fixed; inset:0;
-    background:rgba(0,0,0,0.65); z-index:400;
+    background:rgba(0,0,0,0.65); z-index:600;
     display:none; justify-content:flex-end;
     flex-direction:column; align-items:center;
     backdrop-filter:blur(6px);
@@ -1507,12 +1507,34 @@ footer {
    🎯 META DE VENDA
 ============================================================ */
 .goal-card {
-    background:var(--card-bg); border:1px solid var(--card-border);
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
     border-radius:18px; padding:16px 18px; margin-bottom:14px;
-    cursor:pointer; transition:all 0.2s;
+    cursor:pointer; transition:all 0.4s ease;
     box-shadow:0 2px 12px rgba(13,71,161,0.05);
+    position: relative; overflow: hidden;
 }
 .goal-card:active { transform:scale(0.99); border-color:var(--accent-border); }
+
+/* Modificadores de Tema da Meta */
+/* Pessoal (Azul) */
+.goal-card.personal .goal-pct { color: var(--accent); }
+.goal-card.personal .goal-bar-fill { background: linear-gradient(90deg, var(--accent), #1976D2); }
+.goal-card.personal .goal-icon { color: var(--accent); }
+.goal-card.personal .goal-values strong { color: var(--accent); }
+
+/* Grupo (Dourado) */
+.goal-card.group { border-color: rgba(241, 196, 15, 0.3); background: linear-gradient(to bottom right, var(--card-bg), rgba(241, 196, 15, 0.05)); }
+.goal-card.group .goal-pct { color: #f1c40f; }
+.goal-card.group .goal-bar-fill { background: linear-gradient(90deg, #f1c40f, #b7950b); }
+.goal-card.group .goal-icon { color: #f1c40f; }
+.goal-card.group .goal-values strong { color: #f1c40f; }
+
+/* Estado de Meta Concluída (Verde para ambos) */
+.goal-card.done .goal-values strong { color: var(--success); }
+.goal-card.done .goal-pct { color: var(--success); }
+.goal-card.done .goal-bar-fill { background: linear-gradient(90deg, var(--success), #34d399); }
+
 .goal-header {
     display:flex; justify-content:space-between; align-items:center;
     margin-bottom:12px;
@@ -1525,18 +1547,31 @@ footer {
 .goal-values { font-size:1rem; font-weight:600; }
 .goal-pct {
     font-size:1.4rem; font-weight:800;
-    color:var(--accent); line-height:1;
+    line-height:1;
     min-width:60px; text-align:right;
+    transition: color 0.3s;
 }
-.goal-pct-done { color:var(--success); }
 .goal-bar-track {
-    height:6px; background:var(--bg); border-radius:3px; overflow:hidden;
+    height:8px; background:var(--bg); border-radius:4px; overflow:hidden;
 }
 .goal-bar-fill {
-    height:100%; background:linear-gradient(90deg, var(--accent), #1976D2);
-    border-radius:3px; transition:width 0.8s cubic-bezier(0.25,1,0.5,1);
+    height:100%; border-radius:4px; 
+    transition:width 0.8s cubic-bezier(0.25,1,0.5,1), background 0.3s;
 }
-.goal-bar-fill.done { background:linear-gradient(90deg, var(--success), #34d399); }
+
+/* Animação de troca */
+.goal-content-wrapper {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.goal-content-wrapper.fade-out {
+    opacity: 0;
+    transform: translateY(-5px);
+}
+.goal-content-wrapper.fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .goal-no-meta {
     display:flex; align-items:center; gap:12px; width:100%;
     padding:2px 0;

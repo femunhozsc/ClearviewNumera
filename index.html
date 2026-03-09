@@ -475,6 +475,14 @@
                         </div>
                         <i class="fa-solid fa-chevron-right settings-arrow"></i>
                     </div>
+                    <div class="settings-item" id="adminDashboardSettingsItem" onclick="openAdminDashboard()" style="display: none;">
+                        <div class="settings-icon" style="background:rgba(13, 71, 161, 0.1);"><i class="fa-solid fa-chart-pie" style="color:var(--accent);"></i></div>
+                        <div class="settings-text">
+                            <h4>Dashboard Financeiro</h4>
+                            <p>Custos, lucros e relatórios</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right settings-arrow"></i>
+                    </div>
                     <div class="settings-item" onclick="openInviteSheet()">
                         <div class="settings-icon"><i class="fa-solid fa-link"></i></div>
                         <div class="settings-text">
@@ -609,11 +617,20 @@
     <div class="page-slide-header">
         <button class="page-slide-back" onclick="closeAdminDashboard()"><i class="fa-solid fa-arrow-left"></i></button>
         <span class="page-slide-title">Financeiro & Custos</span>
-        <button class="navbar-btn" onclick="exportFinancialReport()"><i class="fa-solid fa-file-pdf"></i></button>
+        <div>
+            <button class="navbar-btn" onclick="exportFinancialReportCSV()" title="Exportar CSV"><i class="fa-solid fa-file-csv"></i></button>
+            <button class="navbar-btn" onclick="exportFinancialReport()" title="Exportar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+        </div>
     </div>
     <div class="page-slide-body">
         <div class="date-selector-minimal" onclick="openDatePicker()" style="margin:0 auto 20px;width:fit-content">
             <i class="fa-regular fa-calendar"></i> <span id="adminDashDateDisplay">Mês Atual</span>
+        </div>
+
+        <!-- Gráfico de Pizza -->
+        <div class="section-card">
+            <div class="section-card-title">Distribuição de Custos</div>
+            <div class="chart-pie-container"><canvas id="finPieChart"></canvas></div>
         </div>
 
         <div class="financial-summary-grid">
@@ -631,9 +648,60 @@
             </div>
         </div>
 
-        <div class="section-label" style="margin-top:24px">Custos Fixos / Operacionais <button class="section-label-btn" onclick="addFixedCost()"><i class="fa-solid fa-plus"></i> Adicionar</button></div>
+        <!-- Meta do Grupo -->
+        <div class="section-card" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer" onclick="openGroupGoalSheet()">
+            <div style="font-size:0.9rem; font-weight:600"><i class="fa-solid fa-bullseye" style="color:#f1c40f; margin-right:8px"></i> Meta do Grupo</div>
+            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.8rem"></i>
+        </div>
+
+        <div class="section-label" style="margin-top:24px">Custos Fixos / Operacionais <button class="section-label-btn" onclick="openCostManager('fixed')"><i class="fa-solid fa-plus"></i> Adicionar</button></div>
         <div id="fixedCostsList" class="costs-list"></div>
         <div class="fin-total-costs">Total Custos Fixos: <span id="finTotalFixed">R$ 0,00</span></div>
+
+        <div class="section-label" style="margin-top:24px">Custos Variáveis (Extras) <button class="section-label-btn" onclick="openCostManager('variable')"><i class="fa-solid fa-plus"></i> Adicionar</button></div>
+        <div id="variableCostsList" class="costs-list"></div>
+        <div class="fin-total-costs">Total Custos Variáveis: <span id="finTotalVariable">R$ 0,00</span></div>
+    </div>
+</div>
+
+<!-- ============================= PAGE: MEMBER DASHBOARD ============================= -->
+<div id="page-member-dashboard" class="page-slide">
+    <div class="page-slide-header">
+        <button class="page-slide-back" onclick="closeMemberDashboardPage()"><i class="fa-solid fa-arrow-left"></i></button>
+        <span class="page-slide-title" id="memberDashTitle">Desempenho do Membro</span>
+        <div style="width:40px"></div>
+    </div>
+    <div class="page-slide-body">
+        <div class="feed-filters" style="margin-bottom:12px">
+             <button class="feed-filter-btn active" onclick="filterMemberSales('this_month', this)">Este Mês</button>
+             <button class="feed-filter-btn" onclick="filterMemberSales('last_month', this)">Mês Passado</button>
+             <button class="feed-filter-btn" onclick="filterMemberSales('all', this)">Tudo</button>
+        </div>
+        <!-- Summary -->
+        <div class="mydash-summary-grid">
+            <div class="mydash-stat-card main">
+                <div class="mydash-stat-label">Total Vendido</div>
+                <div class="mydash-stat-value" id="dashMemberTotal">R$ 0,00</div>
+            </div>
+            <div class="mydash-stat-card">
+                <div class="mydash-stat-label">Nº de Vendas</div>
+                <div class="mydash-stat-value" id="dashMemberCount">0</div>
+            </div>
+            <div class="mydash-stat-card">
+                <div class="mydash-stat-label">Ticket Médio</div>
+                <div class="mydash-stat-value" id="dashMemberAvg">R$ 0,00</div>
+            </div>
+        </div>
+        <!-- Chart -->
+        <div class="section-card">
+            <div class="section-card-title">Produtos Mais Vendidos</div>
+            <div style="position:relative; height:250px; width:100%">
+                <canvas id="memberSalesChart"></canvas>
+            </div>
+        </div>
+        <!-- History -->
+        <div class="section-label">Histórico de Vendas</div>
+        <div class="feed-list" id="dashMemberHistory"></div>
     </div>
 </div>
 
@@ -644,6 +712,9 @@
         <span class="page-slide-title">Meu Desempenho</span>
     </div>
     <div class="page-slide-body">
+        <!-- Meta Pessoal no Dash -->
+        <div class="goal-card personal" id="myDashGoalCard" onclick="openGoalSheet()"></div>
+
         <!-- Filters -->
         <div class="feed-filters" style="margin-bottom:12px">
             <button class="feed-filter-btn active" onclick="filterMySales('this_month', this)">Este Mês</button>
@@ -1011,6 +1082,33 @@
     </div>
 </div>
 
+<!-- ============================= SHEET: GERENCIAR CUSTO (FINANCEIRO) ============================= -->
+<div class="sheet-overlay" id="sheet-cost-manager">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title" id="costManagerTitle">Adicionar Custo</span>
+            <button class="sheet-close" onclick="closeSheet('sheet-cost-manager')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <input type="hidden" id="editingCostType">
+        <input type="hidden" id="editingCostIndex">
+        <div class="form-field">
+            <label class="form-label">Nome do Custo</label>
+            <input type="text" id="costNameInput" class="form-input" placeholder="Ex: Aluguel, Marketing...">
+        </div>
+        <div class="form-field" id="costDateFieldWrapper" style="display:none;">
+            <label class="form-label">Data de Competência</label>
+            <input type="date" id="costDateInput" class="form-input">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Valor (R$)</label>
+            <input type="text" id="costValueInput" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+        </div>
+        <button class="btn-primary" onclick="saveCost()"><i class="fa-solid fa-check"></i> Salvar Custo</button>
+        <button class="btn-danger" id="btnDeleteCost" onclick="deleteCost()" style="margin-top:12px; display:none;"><i class="fa-solid fa-trash-can"></i> Excluir Custo</button>
+    </div>
+</div>
+
 <!-- ============================= SHEET: CONVITE ============================= -->
 <div class="sheet-overlay" id="sheetInvite">
     <div class="sheet-content">
@@ -1064,6 +1162,23 @@
         <p style="font-size:0.8rem;color:var(--text-sec);margin-bottom:16px">Todas as vendas e movimentações serão salvas nesta data.</p>
         <input type="date" id="globalDateInput" class="form-input">
         <button class="btn-primary" onclick="setGlobalDate()">Confirmar Data</button>
+    </div>
+</div>
+
+<!-- ============================= SHEET: META DO GRUPO ============================= -->
+<div class="sheet-overlay" id="sheetGroupGoal">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title"><i class="fa-solid fa-users"></i> Meta do Grupo</span>
+            <button class="sheet-close" onclick="closeSheet('sheetGroupGoal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-sec);margin-bottom:20px;">Defina a meta de faturamento total para a equipe neste mês.</p>
+        <div class="form-field">
+            <label class="form-label">Meta do Grupo (R$)</label>
+            <input type="text" id="groupGoalInput" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+        </div>
+        <button class="btn-primary" onclick="saveGroupGoal()">Salvar Meta</button>
     </div>
 </div>
 
@@ -1269,6 +1384,7 @@ let homeChartInstance = null;
 let homeChartData = { week: [], month: [], year: [] };
 let currentFeedLimit = 5; // Limite inicial do feed
 let feedItemsCache = {}; // Cache para feed items (para comentários)
+let goalToggleInterval = null; // Intervalo para alternar meta
 
 /* ============================================================
    UTILS
@@ -1434,6 +1550,10 @@ function setGlobalDate() {
     closeSheet('sheetDatePicker');
     showToast('Data alterada para lançamentos', 'success');
     loadHomeData(); // Recarrega stats para o mês da data selecionada se quiser, ou mantém hoje.
+    if (document.getElementById('page-admin-dashboard').classList.contains('active')) {
+        loadAdminDashboard();
+        loadAdminDashboard(); // Recarrega para atualizar custos variáveis do mês
+    }
     // O ideal é que o dashboard mostre dados do mês da "appDate"
 }
 function updateDateDisplay() {
@@ -2089,6 +2209,7 @@ function openMySalesDashboard() {
     document.getElementById('customSalesDateRange').style.display = 'none';
     
     filterMySales('this_month');
+    loadMyDashGoal(); // Carrega meta pessoal no dash
 }
 
 let mySalesFilterType = 'this_month';
@@ -2265,6 +2386,28 @@ function renderMySalesChart(data) {
 
 function closeMySalesPage() {
     document.getElementById('page-mysales').classList.remove('active');
+}
+
+async function loadMyDashGoal() {
+    const card = document.getElementById('myDashGoalCard');
+    if (!card || !currentUser) return;
+    
+    const goal = (currentMemberData && currentMemberData.monthlyGoal) ? currentMemberData.monthlyGoal : 0;
+    if (goal <= 0) {
+        card.innerHTML = `<div class="goal-no-meta"><div class="goal-no-meta-icon"><i class="fa-solid fa-bullseye"></i></div><div><div class="goal-no-meta-title">Definir meta pessoal</div><div class="goal-no-meta-sub">Toque para configurar</div></div></div>`;
+        return;
+    }
+
+    // Calcular vendas do mês
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales')
+        .where('sellerId', '==', currentUser.uid).where('createdAt', '>=', start).get();
+    
+    const current = salesSnap.docs.reduce((a, d) => a + (d.data().total || 0), 0);
+    const pct = Math.min(100, Math.round((current / goal) * 100));
+    
+    renderGoalCardContent(card, 'personal', current, goal, pct);
 }
 
 /* ============================================================
@@ -2960,10 +3103,8 @@ async function loadProfileTab() {
     document.getElementById('inviteCodeBig').textContent = currentGroup.code || '------';
     // Hide manage options if not admin
     document.getElementById('groupInfoCard').querySelector('button').style.display = isAdminOrManager() ? 'block' : 'none';
-    
-    // Show Admin Dashboard button
-    const adminBtn = document.getElementById('adminDashBtnCard');
-    if (adminBtn) adminBtn.style.display = isAdminOrManager() ? 'block' : 'none';
+    const adminDashItem = document.getElementById('adminDashboardSettingsItem');
+    if (adminDashItem) adminDashItem.style.display = isAdminOrManager() ? 'flex' : 'none';
 }
 
 /* ============================================================
@@ -3074,14 +3215,18 @@ async function removeMemberAction() {
 
 function viewMemberPerformance() {
     // Reutiliza o dashboard de vendas, mas filtrando pelo ID do membro
-    closeSheet('sheetMemberEdit');
-    // Hack: Set currentUser temporarily to view other's dash (visual only)
-    // Better: Create a specific view. For now, let's use a simple alert or toast as placeholder or implement a basic view.
-    // Implementation: Open My Sales Dashboard but override the filter logic.
-    // Since "My Sales" uses currentUser.uid, we need to refactor loadMySalesData to accept a uid.
-    // For this prompt, I'll just show a toast as it requires refactoring the whole MySales page.
-    // Actually, let's do it right:
-    showToast('Funcionalidade em breve: Ver Dashboard do Membro', 'info');
+    if (!editingMemberId || !editingMemberData) return;
+    viewingMemberData = { id: editingMemberId, data: editingMemberData };
+    
+    closeSheet('sheetMemberEdit'); // Fecha o modal de edição
+    
+    document.getElementById('page-member-dashboard').classList.add('active');
+    document.getElementById('memberDashTitle').textContent = `Desempenho de ${editingMemberData.nickname || editingMemberData.name}`;
+    
+    // Define o filtro padrão e carrega os dados
+    const firstBtn = document.querySelector('#page-member-dashboard .feed-filter-btn');
+    if(firstBtn) filterMemberSales('this_month', firstBtn);
+    else filterMemberSales('this_month');
 }
 
 /* ============================================================
@@ -3255,6 +3400,8 @@ async function generateMonthReport() {
    ADMIN DASHBOARD (FINANCEIRO)
 ============================================================ */
 let adminDashFixedCosts = [];
+let adminDashVariableCosts = [];
+let finChartInstance = null;
 
 function openAdminDashboard() {
     if (!isAdminOrManager()) return;
@@ -3271,17 +3418,39 @@ async function loadAdminDashboard() {
     try {
         const settingsDoc = await db.collection('groups').doc(currentGroupId).collection('settings').doc('costs').get();
         if (settingsDoc.exists) {
-            adminDashFixedCosts = settingsDoc.data().items || [];
+            adminDashFixedCosts = settingsDoc.data().fixed_items || [];
+            adminDashVariableCosts = settingsDoc.data().variable_items || [];
         } else {
-            adminDashFixedCosts = [];
+            adminDashFixedCosts = []; 
         }
-        renderFixedCosts();
     } catch(e) { console.error(e); }
 
-    // 2. Load Financials for selected month (appDate)
+    // 2. Load Variable Costs (Expenses) from Collection for selected month
     const start = new Date(appDate.getFullYear(), appDate.getMonth(), 1);
     const end = new Date(appDate.getFullYear(), appDate.getMonth() + 1, 0, 23, 59, 59);
+    
+    try {
+        const expSnap = await db.collection('groups').doc(currentGroupId).collection('expenses')
+            .where('date', '>=', start).where('date', '<=', end).get();
+        adminDashVariableCosts = expSnap.docs.map(d => ({id: d.id, ...d.data()}));
+    } catch(e) { console.error("Error loading expenses:", e); adminDashVariableCosts = []; }
 
+    renderFixedCosts();
+    renderVariableCosts();
+
+    // 1.5. Fetch all products for cost lookup
+    const productMap = new Map();
+    try {
+        const productsSnap = await db.collection('groups').doc(currentGroupId).collection('products').get();
+        productsSnap.docs.forEach(doc => {
+            productMap.set(doc.id, doc.data());
+        });
+    } catch(e) {
+        console.error("Could not pre-fetch products for cost calculation:", e);
+    }
+
+    // 3. Load Financials for selected month (appDate)
+    // (Start/End already defined above)
     try {
         const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales')
             .where('createdAt', '>=', start)
@@ -3296,20 +3465,14 @@ async function loadAdminDashboard() {
             // Calculate cost from items
             if (s.items) {
                 s.items.forEach(i => {
-                    // We need to fetch product cost. 
-                    // Ideally, cost should be snapshot at sale time.
-                    // If not in sale item, we can't accurately know historical cost.
-                    // Assuming current system doesn't store cost in sale item (it stores price),
-                    // we will estimate using current product cost or 0 if not available.
-                    // *Improvement*: Store cost in sale item in confirmSale.
-                    // For now, let's assume 0 or try to fetch if we had a cache.
-                    // To make this work properly, confirmSale needs to save cost.
-                    // I will update confirmSale to save cost.
-                    if (i.cost) {
+                    if (i.cost !== undefined && i.cost > 0) {
                         productCost += (i.cost * i.qty);
                     } else {
-                        // Fallback: estimate 50% margin if missing (just for display) or 0
-                        // productCost += 0; 
+                        // Fallback for old sales data: look up product cost
+                        const productData = productMap.get(i.productId);
+                        if (productData && productData.costPrice) {
+                            productCost += (productData.costPrice * i.qty);
+                        }
                     }
                 });
             }
@@ -3317,16 +3480,22 @@ async function loadAdminDashboard() {
 
         // Fixed Costs Total
         const fixedTotal = adminDashFixedCosts.reduce((a, c) => a + (c.value || 0), 0);
+        // Variable Costs Total
+        const variableTotal = adminDashVariableCosts.reduce((a, c) => a + (c.value || 0), 0);
 
-        const netProfit = revenue - productCost - fixedTotal;
+        const netProfit = revenue - productCost - fixedTotal - variableTotal;
 
         document.getElementById('finRevenue').textContent = formatBRL(revenue);
         document.getElementById('finProductCost').textContent = formatBRL(productCost);
         document.getElementById('finTotalFixed').textContent = formatBRL(fixedTotal);
+        document.getElementById('finTotalVariable').textContent = formatBRL(variableTotal);
         document.getElementById('finNetProfit').textContent = formatBRL(netProfit);
         
         const profitEl = document.getElementById('finNetProfit');
         profitEl.style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+
+        // Render Chart
+        renderFinancialChart(productCost, fixedTotal, variableTotal);
 
     } catch(e) { console.error(e); }
 }
@@ -3334,93 +3503,539 @@ async function loadAdminDashboard() {
 function renderFixedCosts() {
     const list = document.getElementById('fixedCostsList');
     list.innerHTML = adminDashFixedCosts.map((c, i) => `
-        <div class="cost-row">
+        <div class="cost-row" style="cursor:pointer" onclick="openCostManager('fixed', ${i})">
             <div class="cost-info">
                 <div class="cost-name">${c.name}</div>
             </div>
             <div class="cost-val">${formatBRL(c.value)}</div>
-            <button class="cost-del-btn" onclick="removeFixedCost(${i})"><i class="fa-solid fa-trash"></i></button>
+            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.7rem;"></i>
         </div>
     `).join('');
 }
 
-async function addFixedCost() {
-    const name = prompt('Nome do custo (ex: Aluguel):');
-    if (!name) return;
-    const valStr = prompt('Valor (R$):');
-    const val = parseMoney(valStr);
-    if (isNaN(val)) return;
-
-    adminDashFixedCosts.push({ name, value: val });
-    await saveFixedCosts();
-    loadAdminDashboard();
+function renderVariableCosts() {
+    const list = document.getElementById('variableCostsList');
+    list.innerHTML = adminDashVariableCosts.map((c, i) => `
+        <div class="cost-row" style="cursor:pointer" onclick="openCostManager('variable', ${i})">
+            <div class="cost-date-badge">${c.date ? c.date.toDate().getDate() : '-'}</div>
+            <div class="cost-info">
+                <div class="cost-name">${c.name}</div>
+            </div>
+            <div class="cost-val">${formatBRL(c.value)}</div>
+            <i class="fa-solid fa-pen" style="color:var(--text-muted); font-size:0.7rem; margin-left:8px"></i>
+        </div>
+    `).join('');
 }
 
-async function removeFixedCost(index) {
-    if (!confirm('Remover este custo?')) return;
-    adminDashFixedCosts.splice(index, 1);
-    await saveFixedCosts();
-    loadAdminDashboard();
+function openCostManager(type, index = -1) {
+    document.getElementById('editingCostType').value = type;
+    document.getElementById('editingCostIndex').value = index;
+
+    const titleEl = document.getElementById('costManagerTitle');
+    const nameInput = document.getElementById('costNameInput');
+    const valueInput = document.getElementById('costValueInput');
+    const dateInput = document.getElementById('costDateInput');
+    const deleteBtn = document.getElementById('btnDeleteCost');
+
+    const costsArray = type === 'fixed' ? adminDashFixedCosts : adminDashVariableCosts;
+    const typeName = type === 'fixed' ? 'Custo Fixo' : 'Custo Variável';
+
+    if (index > -1) { // Editing
+        const item = costsArray[index];
+        titleEl.textContent = `Editar ${typeName}`;
+        nameInput.value = item.name;
+        valueInput.value = (item.value || 0).toFixed(2).replace('.',',');
+        if (type === 'variable' && item.date) {
+            dateInput.value = item.date.toDate().toISOString().split('T')[0];
+        }
+        deleteBtn.style.display = 'block';
+    } else { // Adding
+        titleEl.textContent = `Novo ${typeName}`;
+        nameInput.value = '';
+        valueInput.value = '';
+        if (type === 'variable') {
+            // Default to today or appDate
+            dateInput.value = appDate.toISOString().split('T')[0];
+        }
+        deleteBtn.style.display = 'none';
+    }
+    document.getElementById('costDateFieldWrapper').style.display = type === 'variable' ? 'block' : 'none';
+    openSheet('sheet-cost-manager');
 }
 
-async function saveFixedCosts() {
-    try {
+async function saveCost() {
+    const type = document.getElementById('editingCostType').value;
+    const index = parseInt(document.getElementById('editingCostIndex').value);
+    const name = document.getElementById('costNameInput').value.trim();
+    const value = parseMoney(document.getElementById('costValueInput').value);
+    const dateVal = document.getElementById('costDateInput').value;
+
+    if (!name || isNaN(value)) {
+        showToast('Preencha nome e valor válidos.', 'error');
+        return;
+    }
+
+    if (type === 'fixed') {
+        // FIXED COSTS (Settings)
+        if (index > -1) adminDashFixedCosts[index] = { name, value };
+        else adminDashFixedCosts.push({ name, value });
+        
         await db.collection('groups').doc(currentGroupId).collection('settings').doc('costs').set({
-            items: adminDashFixedCosts
-        });
-    } catch(e) { showToast('Erro ao salvar custos', 'error'); }
+            fixed_items: adminDashFixedCosts
+        }, { merge: true });
+
+    } else {
+        // VARIABLE COSTS (Expenses Collection)
+        const dateObj = dateVal ? new Date(dateVal + 'T12:00:00') : appDate;
+        const expenseData = {
+            name, value,
+            date: firebase.firestore.Timestamp.fromDate(dateObj),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (index > -1) {
+            const id = adminDashVariableCosts[index].id;
+            await db.collection('groups').doc(currentGroupId).collection('expenses').doc(id).update(expenseData);
+        } else {
+            await db.collection('groups').doc(currentGroupId).collection('expenses').add(expenseData);
+        }
+    }
+
+    loadAdminDashboard();
+    closeSheet('sheet-cost-manager');
+    showToast('Custo salvo com sucesso!', 'success');
 }
 
-function exportFinancialReport() {
-    generateMonthReport(); // Reuses the existing PDF logic, maybe enhanced later
+async function deleteCost() {
+    if (!confirm('Tem certeza que deseja excluir este custo?')) return;
+
+    const type = document.getElementById('editingCostType').value;
+    const index = parseInt(document.getElementById('editingCostIndex').value);
+    
+    if (index > -1) {
+        if (type === 'fixed') {
+            adminDashFixedCosts.splice(index, 1);
+            await db.collection('groups').doc(currentGroupId).collection('settings').doc('costs').set({
+                fixed_items: adminDashFixedCosts
+            }, { merge: true });
+        } else {
+            const id = adminDashVariableCosts[index].id;
+            await db.collection('groups').doc(currentGroupId).collection('expenses').doc(id).delete();
+        }
+
+        loadAdminDashboard();
+        closeSheet('sheet-cost-manager');
+        showToast('Custo excluído.', 'success');
+    }
+}
+
+function renderFinancialChart(prodCost, fixedCost, varCost) {
+    const ctx = document.getElementById('finPieChart');
+    if (!ctx) return;
+    
+    if (finChartInstance) finChartInstance.destroy();
+    
+    const isDark = document.body.classList.contains('dark-mode');
+    
+    finChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Produtos (CMV)', 'Custos Fixos', 'Custos Variáveis'],
+            datasets: [{
+                data: [prodCost, fixedCost, varCost],
+                backgroundColor: ['#d93025', '#1a73e8', '#f97d1c'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: isDark ? '#ccc' : '#555', font: {size: 10} } } }
+        }
+    });
+}
+
+function exportFinancialReportCSV() {
+    if (!isAdminOrManager()) return;
+    showToast('Gerando relatório CSV...', 'info');
+
+    const monthDate = appDate;
+    const revenue = parseMoney(document.getElementById('finRevenue').textContent.replace('R$ ',''));
+    const productCost = parseMoney(document.getElementById('finProductCost').textContent.replace('R$ ',''));
+    const fixedTotal = parseMoney(document.getElementById('finTotalFixed').textContent.replace('R$ ',''));
+    const variableTotal = parseMoney(document.getElementById('finTotalVariable').textContent.replace('R$ ',''));
+    const netProfit = parseMoney(document.getElementById('finNetProfit').textContent.replace('R$ ',''));
+
+    const formatCsvNumber = (num) => num.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Relatório Financeiro - " + currentGroup.name + "\r\n";
+    csvContent += "Período;" + monthDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'}) + "\r\n\r\n";
+    csvContent += "Categoria;Valor\r\n";
+    csvContent += "Faturamento Bruto;" + formatCsvNumber(revenue) + "\r\n";
+    csvContent += "Custo Produtos (CMV);" + formatCsvNumber(productCost) + "\r\n";
+    csvContent += "Custos Fixos;" + formatCsvNumber(fixedTotal) + "\r\n";
+    csvContent += "Custos Variáveis;" + formatCsvNumber(variableTotal) + "\r\n";
+    csvContent += "Lucro Líquido;" + formatCsvNumber(netProfit) + "\r\n\r\n";
+
+    if (adminDashFixedCosts.length > 0) {
+        csvContent += "Detalhe Custos Fixos\r\nDescrição;Valor\r\n";
+        adminDashFixedCosts.forEach(c => { csvContent += c.name + ";" + formatCsvNumber(c.value) + "\r\n"; });
+        csvContent += "\r\n";
+    }
+    if (adminDashVariableCosts.length > 0) {
+        csvContent += "Detalhe Custos Variáveis\r\nDescrição;Valor\r\n";
+        adminDashVariableCosts.forEach(c => { csvContent += c.name + ";" + formatCsvNumber(c.value) + "\r\n"; });
+    }
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Financeiro_CSV_${currentGroup.name}_${monthDate.getMonth()+1}_${monthDate.getFullYear()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+async function generateFinancialReportPDF() {
+    if (!isAdminOrManager()) return;
+    showToast('Gerando relatório financeiro...', 'info');
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const monthDate = appDate;
+
+        // Pega os dados direto da tela para garantir consistência
+        const revenue = parseMoney(document.getElementById('finRevenue').textContent.replace('R$ ',''));
+        const productCost = parseMoney(document.getElementById('finProductCost').textContent.replace('R$ ',''));
+        const fixedTotal = parseMoney(document.getElementById('finTotalFixed').textContent.replace('R$ ',''));
+        const variableTotal = parseMoney(document.getElementById('finTotalVariable').textContent.replace('R$ ',''));
+        const netProfit = parseMoney(document.getElementById('finNetProfit').textContent.replace('R$ ',''));
+
+        // --- Design do PDF ---
+        const pageWidth = doc.internal.pageSize.getWidth();
+        try { // Robust image adding
+            const img = document.querySelector('.logo-img') || document.querySelector('.auth-logo-img');
+            if (img) {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const dataURL = canvas.toDataURL('image/png');
+                doc.addImage(dataURL, 'PNG', 14, 10, 10, 10);
+            }
+        } catch(e) {
+            console.warn("Could not add logo to PDF:", e);
+        }
+
+        doc.setFontSize(18);
+        doc.text("Relatório Financeiro", 28, 16);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Clearview Numera • ${currentGroup.name}`, 28, 21);
+        doc.text(`Período: ${monthDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})}`, 14, 30);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 30, { align: 'right' });
+
+        // Resumo Financeiro
+        doc.autoTable({
+            startY: 35,
+            head: [['Faturamento Bruto', 'Custo Produtos (CMV)', 'Custos Fixos', 'Custos Variáveis', 'Lucro Líquido']],
+            body: [[
+                formatBRL(revenue),
+                formatBRL(productCost),
+                formatBRL(fixedTotal),
+                formatBRL(variableTotal),
+                formatBRL(netProfit)
+            ]],
+            theme: 'grid',
+            headStyles: { fillColor: [13, 71, 161] }, // Azul
+            bodyStyles: { fontStyle: 'bold' },
+            didParseCell: function (data) {
+                if (data.column.index === 4) { // Coluna Lucro Líquido
+                    data.cell.styles.textColor = netProfit >= 0 ? [30, 142, 62] : [217, 48, 37]; // Verde ou vermelho
+                }
+            }
+        });
+
+        // Detalhe Custos Fixos
+        if (adminDashFixedCosts.length > 0) {
+            doc.text("Detalhamento de Custos Fixos", 14, doc.lastAutoTable.finalY + 10);
+            const costRows = adminDashFixedCosts.map(c => [c.name, formatBRL(c.value)]);
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 12,
+                head: [['Descrição do Custo', 'Valor']],
+                body: costRows,
+                theme: 'striped',
+                styles: { fontSize: 9 }
+            });
+        }
+
+        // Detalhe Custos Variáveis
+        if (adminDashVariableCosts.length > 0) {
+            doc.text("Detalhamento de Custos Variáveis", 14, doc.lastAutoTable.finalY + 10);
+            const costRows = adminDashVariableCosts.map(c => [c.name, formatBRL(c.value)]);
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 12,
+                head: [['Descrição do Custo', 'Valor']],
+                body: costRows,
+                theme: 'striped',
+                styles: { fontSize: 9 }
+            });
+        }
+
+        // Salvar/Compartilhar
+        const pdfBlob = doc.output('blob');
+        const fileName = `Financeiro_${currentGroup.name}_${monthDate.getMonth()+1}_${monthDate.getFullYear()}.pdf`;
+        
+        if (navigator.share) {
+            const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+            navigator.share({
+                files: [file],
+                title: 'Relatório Financeiro',
+                text: `Segue relatório financeiro de ${monthDate.toLocaleDateString('pt-BR', {month:'long'})} gerado pelo Clearview Numera.`
+            }).catch(e => doc.save(fileName));
+        } else {
+            doc.save(fileName);
+        }
+        showToast('Relatório gerado!', 'success');
+    } catch (e) {
+        console.error("PDF Generation Error:", e);
+        showToast('Ocorreu um erro ao gerar o PDF.', 'error');
+    }
+}
+
+/* ============================================================
+   MEMBER DASHBOARD
+============================================================ */
+let viewingMemberData = null;
+let memberSalesChartInstance = null;
+let memberSalesFilterType = 'this_month';
+
+function closeMemberDashboardPage() {
+    document.getElementById('page-member-dashboard').classList.remove('active');
+    viewingMemberData = null; // Limpa o estado
+}
+
+function filterMemberSales(type, btn) {
+    memberSalesFilterType = type;
+    if (btn) {
+        document.querySelectorAll('#page-member-dashboard .feed-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    
+    const now = new Date();
+    let start, end;
+
+    if (type === 'this_month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    } else if (type === 'last_month') {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    } else { // 'all'
+        start = new Date(2020, 0, 1);
+        end = now;
+    }
+    loadMemberDashboardData(start, end);
+}
+
+async function loadMemberDashboardData(start, end) {
+    if (!viewingMemberData) return;
+
+    const list = document.getElementById('dashMemberHistory');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando dados...</div>';
+    
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+            .where('sellerId', '==', viewingMemberData.id)
+            .where('createdAt', '>=', start)
+            .where('createdAt', '<=', end)
+            .orderBy('createdAt', 'desc')
+            .get();
+        
+        const sales = snap.docs.map(d => d.data());
+        
+        // Totais
+        const totalVal = sales.reduce((a, s) => a + (s.total || 0), 0);
+        document.getElementById('dashMemberTotal').textContent = formatBRL(totalVal);
+        document.getElementById('dashMemberCount').textContent = sales.length;
+        const avgTicket = totalVal > 0 && sales.length > 0 ? totalVal / sales.length : 0;
+        document.getElementById('dashMemberAvg').textContent = formatBRL(avgTicket);
+
+        // Dados do Gráfico
+        const productStats = {};
+        sales.forEach(s => {
+            if (s.items) {
+                s.items.forEach(i => {
+                    if (!productStats[i.productName]) productStats[i.productName] = 0;
+                    productStats[i.productName] += (i.qty || 1);
+                });
+            }
+        });
+        const sortedProds = Object.entries(productStats).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        renderMemberSalesChart(sortedProds);
+
+        // Histórico
+        if (sales.length === 0) {
+            list.innerHTML = '<div class="feed-empty">Nenhuma venda registrada neste período.</div>';
+        } else {
+            list.innerHTML = sales.map(s => `
+                <div class="feed-item">
+                    <div class="feed-icon sale"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <div class="feed-body">
+                        <div class="feed-who">${s.items ? s.items.length + ' itens' : 'Venda'}</div>
+                        <div class="feed-desc">${s.items ? s.items.map(i=>i.productName).join(', ') : ''}</div>
+                        <div class="feed-meta"><i class="fa-regular fa-clock"></i> ${s.createdAt.toDate().toLocaleDateString('pt-BR')} às ${s.createdAt.toDate().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                    <div class="feed-amount">${formatBRL(s.total)}</div>
+                </div>
+            `).join('');
+        }
+    } catch(e) {
+        console.error(e);
+        list.innerHTML = '<div class="feed-empty">Erro ao carregar dados: ' + e.message + '</div>';
+    }
+}
+
+function renderMemberSalesChart(data) {
+    const ctx = document.getElementById('memberSalesChart').getContext('2d');
+    const isDark = document.body.classList.contains('dark-mode');
+    if (memberSalesChartInstance) memberSalesChartInstance.destroy();
+    memberSalesChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d[0]),
+            datasets: [{
+                label: 'Qtd Vendida',
+                data: data.map(d => d[1]),
+                backgroundColor: '#0D47A1',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: isDark ? '#333' : '#e8eaf0' }, ticks: { color: isDark ? '#888' : '#5f6368' } },
+                x: { grid: { display: false }, ticks: { color: isDark ? '#888' : '#5f6368', font: { size: 10 } } }
+            }
+        }
+    });
 }
 
 /* ============================================================
    🎯 METAS DE VENDA
 ============================================================ */
+let currentGoalMode = 'personal'; // 'personal' or 'group'
+
 async function loadGoalCard() {
     const card = document.getElementById('goalCard');
     if (!card || !currentGroupId || !currentUser) return;
-    try {
-        // Reload memberData to get latest goal
-        const memberDoc = await db.collection('groups').doc(currentGroupId).collection('members').doc(currentUser.uid).get();
-        const goal = memberDoc.exists ? (memberDoc.data().monthlyGoal || 0) : 0;
-        if (currentMemberData && memberDoc.exists) currentMemberData.monthlyGoal = memberDoc.data().monthlyGoal || 0;
+    
+    // Iniciar loop de alternância se não existir
+    if (!goalToggleInterval) {
+        goalToggleInterval = setInterval(() => {
+            currentGoalMode = currentGoalMode === 'personal' ? 'group' : 'personal';
+            updateGoalCardDisplay();
+        }, 10000); // 10 segundos
+    }
+    
+    updateGoalCardDisplay();
+}
 
-        if (goal <= 0) {
-            card.style.display = 'flex';
-            card.innerHTML = `<div class="goal-no-meta"><div class="goal-no-meta-icon"><i class="fa-solid fa-bullseye"></i></div><div><div class="goal-no-meta-title">Definir meta mensal</div><div class="goal-no-meta-sub">Toque para configurar sua meta</div></div><i class="fa-solid fa-chevron-right" style="margin-left:auto;color:var(--text-muted);font-size:0.75rem"></i></div>`;
-            return;
+async function updateGoalCardDisplay() {
+    const card = document.getElementById('goalCard');
+    if (!card) return;
+
+    // Preparar dados
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    let current = 0;
+    let goal = 0;
+    let label = '';
+    let icon = '';
+    let pct = 0;
+    
+    // Animação de saída
+    const wrapper = card.querySelector('.goal-content-wrapper');
+    if (wrapper) wrapper.classList.add('fade-out');
+
+    setTimeout(async () => {
+        if (currentGoalMode === 'personal') {
+            // META PESSOAL (Azul)
+            goal = (currentMemberData && currentMemberData.monthlyGoal) ? currentMemberData.monthlyGoal : 0;
+            
+            // Vendas pessoais (usando cache da home se possível)
+            const sales = (_homeDataCache || []).filter(s => 
+                s.sellerId === currentUser.uid && 
+                (s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt)) >= start
+            );
+            current = sales.reduce((a,s) => a+(s.total||0), 0);
+            label = 'Minha Meta';
+            icon = 'fa-user';
+        } else {
+            // META GRUPO (Dourado)
+            goal = (currentGroup && currentGroup.monthlyGoal) ? currentGroup.monthlyGoal : 0;
+            
+            // Vendas do grupo
+            const sales = (_homeDataCache || []).filter(s => 
+                (s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt)) >= start
+            );
+            current = sales.reduce((a,s) => a+(s.total||0), 0);
+            label = 'Meta do Grupo';
+            icon = 'fa-users';
         }
 
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        // Use cached sales if available
-        const sales = (_homeDataCache || []).filter(s =>
-            s.sellerId === currentUser.uid &&
-            s.createdAt && s.createdAt.toDate && s.createdAt.toDate() >= start
-        );
-        const current = sales.reduce((a,s) => a+(s.total||0), 0);
-        const pct = Math.min(100, Math.round((current / goal) * 100));
-        const done = pct >= 100;
+        if (goal > 0) {
+            pct = Math.min(100, Math.round((current / goal) * 100));
+        } else {
+            pct = 0;
+        }
+        
+        // Define classes
+        card.className = `goal-card ${currentGoalMode}`;
+        if (pct >= 100) {
+            card.classList.add('done');
+        }
 
+        if (goal <= 0) {
+            // Se não tiver meta definida, mostra estado vazio (apenas para pessoal, grupo mostra 0)
+            if (currentGoalMode === 'personal') {
+                card.innerHTML = `<div class="goal-no-meta goal-content-wrapper fade-in"><div class="goal-no-meta-icon"><i class="fa-solid fa-bullseye"></i></div><div><div class="goal-no-meta-title">Definir meta mensal</div><div class="goal-no-meta-sub">Toque para configurar</div></div></div>`;
+            } else {
+                 // Se grupo não tem meta, volta para pessoal imediatamente
+                 currentGoalMode = 'personal';
+                 // Evita loop infinito se pessoal também não tiver
+                 return; 
+            }
+        } else {
+            renderGoalCardContent(card, currentGoalMode, current, goal, pct, label, icon);
+        }
         card.style.display = 'block';
-        card.innerHTML = `
+    }, 300); // Tempo da animação de saída
+}
+
+function renderGoalCardContent(card, mode, current, goal, pct, labelOverride, iconOverride) {
+    const done = pct >= 100;
+    const label = labelOverride || (mode === 'personal' ? 'Minha Meta' : 'Meta do Grupo');
+    const icon = iconOverride || (mode === 'personal' ? 'fa-user' : 'fa-users');
+    
+    card.innerHTML = `
+        <div class="goal-content-wrapper fade-in">
             <div class="goal-header">
                 <div class="goal-info">
-                    <div class="goal-label"><i class="fa-solid fa-bullseye" style="color:${done?'var(--success)':'var(--accent)'}"></i> ${done ? '🎉 Meta atingida!' : 'Meta do Mês'}</div>
-                    <div class="goal-values"><strong style="color:${done?'var(--success)':'var(--text-main)'}">${formatBRL(current)}</strong> <span style="color:var(--text-muted);font-weight:400">/ ${formatBRL(goal)}</span></div>
+                    <div class="goal-label"><i class="fa-solid ${icon} goal-icon"></i> ${done ? '🎉 Meta Atingida!' : label}</div>
+                    <div class="goal-values"><strong>${formatBRL(current)}</strong> <span style="color:var(--text-muted);font-weight:400">/ ${formatBRL(goal)}</span></div>
                 </div>
-                <div class="goal-pct${done?' goal-pct-done':''}">${pct}%</div>
+                <div class="goal-pct">${pct}%</div>
             </div>
             <div class="goal-bar-track">
-                <div class="goal-bar-fill${done?' done':''}" style="width:0%" id="goalBarFill"></div>
-            </div>`;
-        setTimeout(() => {
-            const fill = document.getElementById('goalBarFill');
-            if (fill) fill.style.width = pct + '%';
-        }, 80);
-    } catch(e) { if(card) card.style.display='none'; }
+                <div class="goal-bar-fill" style="width:${pct}%"></div>
+            </div>
+        </div>`;
 }
 
 function openGoalSheet() {
@@ -3441,6 +4056,24 @@ async function saveGoal() {
         loadGoalCard();
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
     finally { setLoading('btnSaveGoal', false, '<i class="fa-solid fa-bullseye"></i> Definir Meta'); }
+}
+
+function openGroupGoalSheet() {
+    const current = currentGroup && currentGroup.monthlyGoal ? currentGroup.monthlyGoal : 0;
+    document.getElementById('groupGoalInput').value = current > 0 ? current.toFixed(2).replace('.',',') : '';
+    openSheet('sheetGroupGoal');
+}
+
+async function saveGroupGoal() {
+    const val = parseMoney(document.getElementById('groupGoalInput').value);
+    if (!val || val < 0) return;
+    try {
+        await db.collection('groups').doc(currentGroupId).update({ monthlyGoal: val });
+        if (currentGroup) currentGroup.monthlyGoal = val;
+        showToast('Meta do grupo atualizada!', 'success');
+        closeSheet('sheetGroupGoal');
+        updateGoalCardDisplay(); // Atualiza visualização
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
 }
 
 /* ============================================================
