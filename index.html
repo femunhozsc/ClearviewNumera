@@ -22,6 +22,7 @@
 
 <!-- ============================= SPLASH ============================= -->
 <div id="splash">
+    <div class="splash-particles" id="splashParticles"></div>
     <div class="splash-inner">
         <div class="splash-logo"><img src="powered_clearview.png" alt="Clearview"></div>
         <div class="splash-greeting">
@@ -31,6 +32,7 @@
         </div>
     </div>
     <div class="splash-tagline">Gestão empresarial inteligente</div>
+    <div class="splash-progress-bar"><div class="splash-progress-fill" id="splashProgressFill"></div></div>
 </div>
 
 <!-- ============================= AUTH SCREEN ============================= -->
@@ -48,6 +50,7 @@
             <!-- PANEL 0: Main -->
             <div class="auth-panel" id="auth-main">
                 <div class="auth-panel-inner">
+                    <div class="auth-welcome-badge"><i class="fa-solid fa-chart-line"></i> Clearview Numera</div>
                     <h1 class="auth-title">Olá, gestor(a)</h1>
                     <p class="auth-subtitle">Controle vendas, estoque e equipe em um só lugar.</p>
                     <div class="auth-divider-line"></div>
@@ -99,7 +102,14 @@
                 <div class="auth-panel-inner">
                     <button class="auth-back-btn" onclick="showMainAuth()"><i class="fa-solid fa-arrow-left"></i></button>
                     <h1 class="auth-title">Criar Conta</h1>
-                    <p class="auth-subtitle">Você vai entrar ou criar um grupo depois</p>
+                    <p class="auth-subtitle">Preencha seus dados para começar</p>
+                    <div class="auth-steps-indicator">
+                        <div class="auth-step-dot active"></div>
+                        <div class="auth-step-line"></div>
+                        <div class="auth-step-dot"></div>
+                        <div class="auth-step-line"></div>
+                        <div class="auth-step-dot"></div>
+                    </div>
                     <div class="auth-field-group auth-field-group-scroll">
                         <div class="auth-field-row">
                             <div class="auth-field">
@@ -145,6 +155,7 @@
                                 <input type="text" id="regCargo" class="auth-field-input" placeholder="Vendedor, Gerente, Diretor...">
                             </div>
                         </div>
+                        <div class="auth-section-divider"><span>Acesso</span></div>
                         <div class="auth-field">
                             <label class="auth-field-label">E-mail</label>
                             <div class="auth-field-wrap">
@@ -284,6 +295,35 @@
                     <div class="chart-summary" id="chartSummary">
                         <!-- Preenchido via JS -->
                     </div>
+                </div>
+
+                <!-- Meta do Mês -->
+                <div class="goal-card" id="goalCard" onclick="openGoalSheet()" style="display:none"></div>
+
+                <!-- Estoque Crítico Alert -->
+                <div class="stock-alert-card" id="stockAlertCard" onclick="switchTab('stock')" style="display:none">
+                    <div class="stock-alert-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stock-alert-body">
+                        <div class="stock-alert-title">Estoque crítico</div>
+                        <div class="stock-alert-list" id="stockAlertList"></div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.75rem;flex-shrink:0"></i>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions-row">
+                    <button class="quick-action-btn" onclick="openRankingPage()">
+                        <i class="fa-solid fa-trophy"></i><span>Ranking</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="openAgendaPage()">
+                        <i class="fa-regular fa-calendar"></i><span>Agenda</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="openGoalSheet()">
+                        <i class="fa-solid fa-bullseye"></i><span>Minha Meta</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="openMySalesDashboard()">
+                        <i class="fa-solid fa-chart-line"></i><span>Meu Dash</span>
+                    </button>
                 </div>
 
                 <!-- Stats Modulares -->
@@ -518,6 +558,33 @@
         <div class="members-list" id="membersList">
             <div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>
         </div>
+    </div>
+</div>
+
+<!-- ============================= PAGE: RANKING ============================= -->
+<div id="page-ranking" class="page-slide">
+    <div class="page-slide-header">
+        <button class="page-slide-back" onclick="closeRankingPage()"><i class="fa-solid fa-arrow-left"></i></button>
+        <span class="page-slide-title">Ranking do Mês</span>
+        <div style="width:40px"></div>
+    </div>
+    <div class="page-slide-body" style="padding-top:8px">
+        <div class="ranking-month-label" id="rankingMonthLabel"></div>
+        <div id="rankingPodium"></div>
+        <div class="section-label" style="margin:20px 0 12px">Todos os vendedores</div>
+        <div id="rankingFullList"></div>
+    </div>
+</div>
+
+<!-- ============================= PAGE: AGENDA ============================= -->
+<div id="page-agenda" class="page-slide">
+    <div class="page-slide-header">
+        <button class="page-slide-back" onclick="closeAgendaPage()"><i class="fa-solid fa-arrow-left"></i></button>
+        <span class="page-slide-title">Agenda do Grupo</span>
+        <button class="navbar-btn" onclick="openAddReminderSheet()" title="Novo lembrete"><i class="fa-solid fa-plus"></i></button>
+    </div>
+    <div class="page-slide-body" id="agendaBody">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
     </div>
 </div>
 
@@ -892,16 +959,95 @@
     </div>
 </div>
 
+<!-- ============================= SHEET: MINHA META ============================= -->
+<div class="sheet-overlay" id="sheetGoal">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">🎯 Minha Meta Mensal</span>
+            <button class="sheet-close" onclick="closeSheet('sheetGoal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-sec);margin-bottom:20px;line-height:1.5">
+            Defina sua meta de vendas para este mês. O progresso aparecerá na tela inicial em tempo real.
+        </p>
+        <div class="form-field">
+            <label class="form-label">Meta de vendas (R$)</label>
+            <input type="text" id="goalInput" class="form-input" placeholder="Ex: 10.000,00" oninput="maskMoney(this)">
+        </div>
+        <button class="btn-primary" onclick="saveGoal()" id="btnSaveGoal">
+            <i class="fa-solid fa-bullseye"></i> Definir Meta
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetGoal')">Cancelar</button>
+    </div>
+</div>
+
+<!-- ============================= SHEET: DETALHE VENDA + COMENTÁRIOS ============================= -->
+<div class="sheet-overlay" id="sheetFeedDetail">
+    <div class="sheet-content" style="max-height:88vh">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Detalhes da Venda</span>
+            <button class="sheet-close" onclick="closeSheet('sheetFeedDetail')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="feedDetailBody"></div>
+        <div class="section-label" style="margin:18px 0 12px">
+            <span>Comentários</span>
+        </div>
+        <div id="feedCommentsList" class="comments-list"></div>
+        <div class="comment-input-row">
+            <input type="text" id="commentInput" class="form-input comment-input" placeholder="Adicionar comentário..."
+                onkeydown="if(event.key==='Enter')postComment()">
+            <button class="comment-send-btn" onclick="postComment()" id="btnSendComment">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= SHEET: NOVO LEMBRETE ============================= -->
+<div class="sheet-overlay" id="sheetAddReminder">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">📅 Novo Lembrete</span>
+            <button class="sheet-close" onclick="closeSheet('sheetAddReminder')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Título *</label>
+            <input type="text" id="reminderTitle" class="form-input" placeholder="Ex: Reunião de equipe, Repor estoque...">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Data (opcional)</label>
+            <input type="date" id="reminderDate" class="form-input">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Detalhes (opcional)</label>
+            <textarea id="reminderDesc" class="form-textarea" rows="2" placeholder="Mais informações..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveReminder()" id="btnSaveReminder">
+            <i class="fa-solid fa-check"></i> Criar Lembrete
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetAddReminder')">Cancelar</button>
+    </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <!-- URGENT POPUP -->
 <div class="urgent-popup" id="urgentPopup">
-    <div class="urgent-header"><i class="fa-solid fa-triangle-exclamation"></i> AVISO URGENTE</div>
-    <div class="urgent-text" id="urgentPopupText"></div>
-    <button class="urgent-btn" onclick="document.getElementById('urgentPopup').classList.remove('active')">
-        Entendido
-    </button>
+    <div class="urgent-inner">
+        <div class="urgent-pulse-ring"></div>
+        <div class="urgent-icon-wrap"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="urgent-content">
+            <div class="urgent-header">AVISO URGENTE</div>
+            <div class="urgent-title-text" id="urgentPopupTitle"></div>
+            <div class="urgent-text" id="urgentPopupText"></div>
+        </div>
+        <button class="urgent-btn" onclick="dismissUrgentPopup()">
+            <i class="fa-solid fa-check"></i> Entendido
+        </button>
+    </div>
 </div>
 
 <!-- ============================= FIREBASE + JS ============================= -->
@@ -1014,6 +1160,7 @@ let isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStre
 let homeChartInstance = null;
 let homeChartData = { week: [], month: [], year: [] };
 let currentFeedLimit = 5; // Limite inicial do feed
+let feedItemsCache = {}; // Cache para feed items (para comentários)
 
 /* ============================================================
    UTILS
@@ -1437,6 +1584,9 @@ async function loadGroup(groupId) {
 /* ============================================================
    HOME TAB
 ============================================================ */
+let _homeDataCache = null;
+let _homeDataCacheTime = 0;
+
 async function loadHomeData() {
     if (!currentGroupId) return;
     // Atualizar saudações
@@ -1448,9 +1598,17 @@ async function loadHomeData() {
     // Carregar vendas
     checkInstallApp(); // Verificar se deve mostrar card de instalação
     try {
-        // Aumentado limite para popular gráfico anual
-        const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales').orderBy('createdAt', 'desc').limit(1000).get();
-        const sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Cache por 60s para evitar lentidão ao trocar de aba
+        const now = Date.now();
+        let sales;
+        if (_homeDataCache && (now - _homeDataCacheTime) < 60000) {
+            sales = _homeDataCache;
+        } else {
+            const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales').orderBy('createdAt', 'desc').limit(500).get();
+            sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            _homeDataCache = sales;
+            _homeDataCacheTime = now;
+        }
         // My stats
         const mySales = sales.filter(s => s.sellerId === currentUser.uid);
         const myToday = mySales.filter(s => isToday(s.createdAt));
@@ -1474,6 +1632,10 @@ async function loadHomeData() {
         document.getElementById('groupMonthSales').textContent = formatBRL(groupMonth.reduce((a, s) => a + (s.total || 0), 0));
         // Ranking today
         renderRanking(groupToday);
+
+        // New features
+        loadGoalCard();
+        loadStockAlerts();
     } catch(e) { console.error(e); }
     // Feed real-time
     loadFeed();
@@ -1651,15 +1813,13 @@ function loadFeed(forceRefresh = false) {
                 return;
             }
             
-            const docs = snap.docs.map(d => d.data());
+            const docs = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+            // Update cache
+            docs.forEach(d => { if(d._id) feedItemsCache[d._id] = d; });
             let html = '';
-            
-            // Check Urgent Notice (Popup) - Apenas no primeiro load
-            if (docs.length > 0 && docs[0].type === 'alert') {
-                // Verifica se é recente (última hora) para não spammar
-                const diff = (new Date() - docs[0].createdAt.toDate()) / 1000 / 60;
-                if (diff < 60) showUrgentPopup(docs[0].description);
-            }
+
+            // Check unread urgent notices (any age, tracked via localStorage)
+            checkAndShowPendingAlerts(docs);
 
             let lastHeader = '';
 
@@ -1701,10 +1861,177 @@ function loadFeed(forceRefresh = false) {
         });
 }
 
-function showUrgentPopup(text) {
-    document.getElementById('urgentPopupText').textContent = text.replace('⚠️ ', '').replace('Urgent', '');
+/* ============================================================
+   HOME CHART — processHomeChartData & setHomeChart
+============================================================ */
+function processHomeChartData(mySales) {
+    const now = new Date();
+    const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    
+    // WEEK (last 7 days)
+    homeChartData.week = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(now); d.setDate(d.getDate() - i);
+        const val = mySales.filter(s => {
+            const sd = s.createdAt && s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+            return sd.getDate()===d.getDate() && sd.getMonth()===d.getMonth() && sd.getFullYear()===d.getFullYear();
+        }).reduce((a,s) => a+(s.total||0), 0);
+        homeChartData.week.push({ label: dayNames[d.getDay()], value: val });
+    }
+    
+    // MONTH (last 30 days)
+    homeChartData.month = [];
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(now); d.setDate(d.getDate() - i);
+        const val = mySales.filter(s => {
+            const sd = s.createdAt && s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+            return sd.getDate()===d.getDate() && sd.getMonth()===d.getMonth() && sd.getFullYear()===d.getFullYear();
+        }).reduce((a,s) => a+(s.total||0), 0);
+        homeChartData.month.push({ label: String(d.getDate()), value: val });
+    }
+    
+    // YEAR (last 12 months)
+    const mNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    homeChartData.year = [];
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const val = mySales.filter(s => {
+            const sd = s.createdAt && s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+            return sd.getMonth()===d.getMonth() && sd.getFullYear()===d.getFullYear();
+        }).reduce((a,s) => a+(s.total||0), 0);
+        homeChartData.year.push({ label: mNames[d.getMonth()], value: val });
+    }
+
+    setHomeChart('week');
+}
+
+function setHomeChart(period) {
+    ['week','month','year'].forEach(p => {
+        const btn = document.getElementById('chartBtn' + p.charAt(0).toUpperCase() + p.slice(1));
+        if (btn) btn.classList.toggle('active', p === period);
+    });
+    const data = homeChartData[period] || [];
+    const ctx = document.getElementById('homeMainChart');
+    if (!ctx) return;
+    const context = ctx.getContext('2d');
+    const isDark = document.body.classList.contains('dark-mode');
+    if (homeChartInstance) { homeChartInstance.destroy(); homeChartInstance = null; }
+    const values = data.map(d => d.value);
+    const labels = data.map(d => d.label);
+    const maxVal = Math.max(...values, 1);
+    homeChartInstance = new Chart(context, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                data: values,
+                backgroundColor: data.map((d,i) => {
+                    const isLast = i === data.length-1;
+                    return isLast
+                        ? (isDark ? '#64b5f6' : '#0D47A1')
+                        : (isDark ? 'rgba(100,181,246,0.3)' : 'rgba(13,71,161,0.22)');
+                }),
+                borderRadius: period === 'month' ? 2 : 5,
+                borderSkipped: false,
+                barPercentage: period === 'month' ? 0.9 : 0.65,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDark ? '#1a1a1a' : '#fff',
+                    titleColor: isDark ? '#f0f0f0' : '#1a1a1a',
+                    bodyColor: isDark ? '#aaa' : '#5f6368',
+                    borderColor: isDark ? '#2c2c2c' : '#e1e4e8',
+                    borderWidth: 1, padding: 10,
+                    callbacks: { label: ctx => ' ' + formatBRL(ctx.raw) }
+                }
+            },
+            scales: {
+                y: { display: false, beginAtZero: true, grid: { display: false } },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: isDark ? '#555' : '#9aa0a6',
+                        font: { size: period === 'month' ? 7 : 10 },
+                        maxRotation: 0, autoSkip: true,
+                        maxTicksLimit: period === 'month' ? 10 : (period === 'year' ? 12 : 7)
+                    }
+                }
+            }
+        }
+    });
+    renderChartSummary(period, values, data);
+}
+
+function renderChartSummary(period, values, data) {
+    const sum = document.getElementById('chartSummary');
+    if (!sum) return;
+    const total = values.reduce((a,v) => a+v, 0);
+    const nonZero = values.filter(v => v > 0);
+    const avg = nonZero.length ? total/nonZero.length : 0;
+    const max = Math.max(...values);
+    const maxLabel = max > 0 ? (data[values.indexOf(max)]?.label || '—') : '—';
+    const periodLabels = { week: 'Semana', month: 'Mês', year: 'Ano' };
+    sum.innerHTML = `
+        <div class="c-sum-item"><div class="c-sum-label">Total ${periodLabels[period]}</div><div class="c-sum-val">${formatBRL(total)}</div></div>
+        <div class="c-sum-item"><div class="c-sum-label">Média</div><div class="c-sum-val">${formatBRL(avg)}</div></div>
+        <div class="c-sum-item"><div class="c-sum-label">Melhor</div><div class="c-sum-val" style="color:var(--success)">${formatBRL(max)}</div></div>
+        <div class="c-sum-item"><div class="c-sum-label">Pico</div><div class="c-sum-val">${maxLabel}</div></div>`;
+}
+
+/* ============================================================
+   URGENT POPUP — with localStorage persistence
+============================================================ */
+let currentUrgentAlertId = null;
+
+function showUrgentPopup(alertId, title, text) {
+    currentUrgentAlertId = alertId;
+    document.getElementById('urgentPopupTitle').textContent = title || 'Aviso';
+    document.getElementById('urgentPopupText').textContent = text || '';
     document.getElementById('urgentPopup').classList.add('active');
 }
+
+function dismissUrgentPopup() {
+    document.getElementById('urgentPopup').classList.remove('active');
+    if (currentUrgentAlertId) {
+        try {
+            const seen = JSON.parse(localStorage.getItem('seenAlerts') || '[]');
+            if (!seen.includes(currentUrgentAlertId)) {
+                seen.push(currentUrgentAlertId);
+                if (seen.length > 50) seen.splice(0, seen.length - 50);
+                localStorage.setItem('seenAlerts', JSON.stringify(seen));
+            }
+        } catch(e) {}
+        currentUrgentAlertId = null;
+    }
+}
+
+function checkAndShowPendingAlerts(docs) {
+    try {
+        const seen = JSON.parse(localStorage.getItem('seenAlerts') || '[]');
+        for (const d of docs) {
+            if (d.type === 'alert' && d._id && !seen.includes(d._id)) {
+                const desc = d.description || '';
+                const colonIdx = desc.indexOf(':');
+                let title, text;
+                if (colonIdx > 0) {
+                    title = desc.substring(0, colonIdx).replace('⚠️ ', '').trim();
+                    text = desc.substring(colonIdx + 1).trim();
+                } else {
+                    title = desc.replace('⚠️ ', '').trim();
+                    text = '';
+                }
+                showUrgentPopup(d._id, title, text);
+                break;
+            }
+        }
+    } catch(e) {}
+}
+
 
 function renderFeedItem(data) {
     const typeMap = {
@@ -1712,17 +2039,21 @@ function renderFeedItem(data) {
         stock_in: { icon: 'fa-boxes-stacked', cls: 'stock-in' },
         stock_out: { icon: 'fa-box-arrow-up', cls: 'stock-out' },
         notice: { icon: 'fa-bullhorn', cls: 'notice' },
+        alert: { icon: 'fa-triangle-exclamation', cls: 'alert-notice' },
         product: { icon: 'fa-tag', cls: 'product' },
     };
     const t = typeMap[data.type] || typeMap.notice;
     const amountHtml = data.amount ? `<div class="feed-amount">${formatBRL(data.amount)}</div>` : (data.type === 'stock_in' || data.type === 'stock_out' ? `<div class="feed-amount neutral">${data.qty || ''} ${data.unit || ''}</div>` : '');
+    const isClickable = data.type === 'sale' && data._id;
+    const clickAttr = isClickable ? `onclick="openFeedDetail('${data._id}')" style="cursor:pointer"` : '';
+    const commentHint = isClickable ? `<div class="feed-comment-hint"><i class="fa-regular fa-comment"></i> comentar</div>` : '';
     return `
-    <div class="feed-item">
+    <div class="feed-item${isClickable ? ' feed-item-clickable' : ''}" ${clickAttr}>
         <div class="feed-icon ${t.cls}"><i class="fa-solid ${t.icon}"></i></div>
         <div class="feed-body">
             <div class="feed-who">${data.userName || '?'} <span>${data.userNickname ? '(' + data.userNickname + ')' : ''}</span></div>
             <div class="feed-desc">${data.description || ''}</div>
-            <div class="feed-meta"><i class="fa-regular fa-clock"></i> ${timeAgo(data.createdAt)}</div>
+            <div class="feed-meta"><i class="fa-regular fa-clock"></i> ${timeAgo(data.createdAt)} ${commentHint}</div>
         </div>
         ${amountHtml}
     </div>`;
@@ -2100,6 +2431,7 @@ async function confirmSale() {
         showToast('Venda registrada!', 'success');
         closeSheet('sheetSale');
         cart = [];
+        _homeDataCache = null; // invalidate cache
         loadHomeData();
     } catch(e) {
         showToast('Erro ao registrar venda: ' + e.message, 'error');
@@ -2158,9 +2490,11 @@ async function postNotice() {
     const title = document.getElementById('noticeTitle').value.trim();
     const msg = document.getElementById('noticeMsg').value.trim();
     if (!title) { showToast('Digite um título para o aviso', 'error'); return; }
-    const icons = { info: '', alert: '⚠️', celebrate: '🎉' }; // Mantém emoji no texto para compatibilidade, mas UI usa ícone
+    const icons = { info: '', alert: '⚠️', celebrate: '🎉' };
     const desc = `${icons[noticeType] || ''} ${title}${msg ? ': ' + msg : ''}`;
-    await addToFeed('notice', desc);
+    // Use 'alert' type for urgent so the popup triggers correctly
+    const feedType = noticeType === 'alert' ? 'alert' : 'notice';
+    await addToFeed(feedType, desc);
     showToast('Aviso publicado!', 'success');
     closeSheet('sheetNotice');
     document.getElementById('noticeTitle').value = '';
@@ -2736,6 +3070,365 @@ async function generateMonthReport() {
 }
 
 /* ============================================================
+   🎯 METAS DE VENDA
+============================================================ */
+async function loadGoalCard() {
+    const card = document.getElementById('goalCard');
+    if (!card || !currentGroupId || !currentUser) return;
+    try {
+        // Reload memberData to get latest goal
+        const memberDoc = await db.collection('groups').doc(currentGroupId).collection('members').doc(currentUser.uid).get();
+        const goal = memberDoc.exists ? (memberDoc.data().monthlyGoal || 0) : 0;
+        if (currentMemberData && memberDoc.exists) currentMemberData.monthlyGoal = memberDoc.data().monthlyGoal || 0;
+
+        if (goal <= 0) {
+            card.style.display = 'flex';
+            card.innerHTML = `<div class="goal-no-meta"><div class="goal-no-meta-icon"><i class="fa-solid fa-bullseye"></i></div><div><div class="goal-no-meta-title">Definir meta mensal</div><div class="goal-no-meta-sub">Toque para configurar sua meta</div></div><i class="fa-solid fa-chevron-right" style="margin-left:auto;color:var(--text-muted);font-size:0.75rem"></i></div>`;
+            return;
+        }
+
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        // Use cached sales if available
+        const sales = (_homeDataCache || []).filter(s =>
+            s.sellerId === currentUser.uid &&
+            s.createdAt && s.createdAt.toDate && s.createdAt.toDate() >= start
+        );
+        const current = sales.reduce((a,s) => a+(s.total||0), 0);
+        const pct = Math.min(100, Math.round((current / goal) * 100));
+        const done = pct >= 100;
+
+        card.style.display = 'block';
+        card.innerHTML = `
+            <div class="goal-header">
+                <div class="goal-info">
+                    <div class="goal-label"><i class="fa-solid fa-bullseye" style="color:${done?'var(--success)':'var(--accent)'}"></i> ${done ? '🎉 Meta atingida!' : 'Meta do Mês'}</div>
+                    <div class="goal-values"><strong style="color:${done?'var(--success)':'var(--text-main)'}">${formatBRL(current)}</strong> <span style="color:var(--text-muted);font-weight:400">/ ${formatBRL(goal)}</span></div>
+                </div>
+                <div class="goal-pct${done?' goal-pct-done':''}">${pct}%</div>
+            </div>
+            <div class="goal-bar-track">
+                <div class="goal-bar-fill${done?' done':''}" style="width:0%" id="goalBarFill"></div>
+            </div>`;
+        setTimeout(() => {
+            const fill = document.getElementById('goalBarFill');
+            if (fill) fill.style.width = pct + '%';
+        }, 80);
+    } catch(e) { if(card) card.style.display='none'; }
+}
+
+function openGoalSheet() {
+    const current = currentMemberData && currentMemberData.monthlyGoal ? currentMemberData.monthlyGoal : 0;
+    document.getElementById('goalInput').value = current > 0 ? current.toFixed(2).replace('.',',') : '';
+    openSheet('sheetGoal');
+}
+
+async function saveGoal() {
+    const val = parseMoney(document.getElementById('goalInput').value);
+    if (!val || val <= 0) { showToast('Informe uma meta válida', 'error'); return; }
+    setLoading('btnSaveGoal', true);
+    try {
+        await db.collection('groups').doc(currentGroupId).collection('members').doc(currentUser.uid).update({ monthlyGoal: val });
+        if (currentMemberData) currentMemberData.monthlyGoal = val;
+        showToast('Meta definida! 🎯', 'success');
+        closeSheet('sheetGoal');
+        loadGoalCard();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnSaveGoal', false, '<i class="fa-solid fa-bullseye"></i> Definir Meta'); }
+}
+
+/* ============================================================
+   🔔 ESTOQUE CRÍTICO
+============================================================ */
+async function loadStockAlerts() {
+    const card = document.getElementById('stockAlertCard');
+    const list = document.getElementById('stockAlertList');
+    if (!card || !list || !currentGroupId || !canManageStock()) { if(card) card.style.display='none'; return; }
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('stock').limit(200).get();
+        const critical = snap.docs.map(d => ({id:d.id,...d.data()}))
+            .filter(s => (s.quantity !== undefined ? s.quantity : 0) <= 2)
+            .sort((a,b) => (a.quantity||0) - (b.quantity||0));
+        if (critical.length === 0) { card.style.display='none'; return; }
+        card.style.display = 'flex';
+        list.innerHTML = critical.slice(0,5).map(s =>
+            `<span class="stock-alert-chip">${s.productName||'?'} · <strong>${s.quantity||0}</strong></span>`
+        ).join('') + (critical.length > 5 ? `<span class="stock-alert-chip muted">+${critical.length-5} mais</span>` : '');
+    } catch(e) { if(card) card.style.display='none'; }
+}
+
+/* ============================================================
+   📊 RANKING DO MÊS
+============================================================ */
+function openRankingPage() {
+    document.getElementById('page-ranking').classList.add('active');
+    const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const now = new Date();
+    const lbl = document.getElementById('rankingMonthLabel');
+    if (lbl) lbl.textContent = `${months[now.getMonth()]} ${now.getFullYear()}`;
+    loadRankingData();
+}
+function closeRankingPage() {
+    document.getElementById('page-ranking').classList.remove('active');
+}
+
+async function loadRankingData() {
+    const podium = document.getElementById('rankingPodium');
+    const fullList = document.getElementById('rankingFullList');
+    if (!podium) return;
+    podium.innerHTML = '<div class="loading-state" style="padding:30px 0"><div class="loading-spinner"></div></div>';
+    fullList.innerHTML = '';
+    try {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const snap = await db.collection('groups').doc(currentGroupId).collection('sales').where('createdAt','>=',start).get();
+        const stats = {};
+        snap.docs.forEach(d => {
+            const s = d.data();
+            if (!s.sellerId) return;
+            if (!stats[s.sellerId]) stats[s.sellerId] = { id: s.sellerId, name: s.sellerNickname || (s.sellerName||'?').split(' ')[0], total:0, count:0 };
+            stats[s.sellerId].total += s.total||0;
+            stats[s.sellerId].count++;
+        });
+        const sorted = Object.values(stats).sort((a,b) => b.total-a.total);
+        if (sorted.length === 0) {
+            podium.innerHTML = '<div class="feed-empty" style="padding:40px 20px"><i class="fa-solid fa-chart-bar"></i><br>Nenhuma venda este mês ainda.</div>';
+            return;
+        }
+
+        // Animated podium — visual order: 2nd | 1st | 3rd
+        const medals = ['🥇','🥈','🥉'];
+        const blockH = ['100px','78px','62px']; // heights for rank 1,2,3
+        const visualOrder = sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] :
+                            sorted.length === 2 ? [sorted[1], sorted[0], null] : [null, sorted[0], null];
+        const visualRanks = sorted.length >= 3 ? [2,1,3] : sorted.length === 2 ? [2,1,0] : [0,1,0];
+
+        podium.innerHTML = `<div class="podium-stage">${visualOrder.map((s, vi) => {
+            if (!s) return `<div class="podium-col rank-empty"></div>`;
+            const rank = visualRanks[vi];
+            const isMe = s.id === currentUser.uid;
+            return `<div class="podium-col rank-${rank}${isMe?' is-me':''}">
+                <div class="podium-medal">${medals[rank-1]}</div>
+                <div class="podium-avatar-wrap"><div class="podium-avatar">${getInitials(s.name)}</div></div>
+                <div class="podium-name">${s.name}${isMe?'<br><span style="font-size:0.55rem;opacity:0.7">você</span>':''}</div>
+                <div class="podium-val">${formatBRL(s.total)}</div>
+                <div class="podium-base" style="height:${blockH[rank-1]}">
+                    <div class="podium-rank-num">${rank}º</div>
+                </div>
+            </div>`;
+        }).join('')}</div>`;
+
+        // Animate podium bases
+        setTimeout(() => {
+            document.querySelectorAll('.podium-base').forEach(el => el.classList.add('animated'));
+        }, 100);
+
+        // Full list
+        fullList.innerHTML = `<div class="ranking-list">` + sorted.map((s, i) => {
+            const isMe = s.id === currentUser.uid;
+            const podiumIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+            return `<div class="ranking-row${isMe?' me':''}">
+                <div class="ranking-pos-num${i < 3?' top':''}">${podiumIcon || (i+1)}</div>
+                <div class="ranking-avatar-sm">${getInitials(s.name)}</div>
+                <div class="ranking-info">
+                    <div class="ranking-name">${s.name} ${isMe?'<span class="ranking-me-badge">você</span>':''}</div>
+                    <div class="ranking-count">${s.count} venda${s.count!==1?'s':''}</div>
+                </div>
+                <div class="ranking-val-col">${formatBRL(s.total)}</div>
+            </div>`;
+        }).join('') + `</div>`;
+    } catch(e) {
+        podium.innerHTML = `<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>${e.message}</div>`;
+    }
+}
+
+/* ============================================================
+   💬 COMENTÁRIOS EM VENDAS
+============================================================ */
+let currentFeedDetailId = null;
+
+function openFeedDetail(feedId) {
+    const data = feedItemsCache[feedId];
+    if (!data) return;
+    currentFeedDetailId = feedId;
+    const body = document.getElementById('feedDetailBody');
+    const date = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+    const itemsText = (data.description || '').replace('Registrou venda: ','').replace('⚠️ ','');
+    body.innerHTML = `
+        <div class="feed-detail-card">
+            <div class="feed-detail-row">
+                <span class="feed-detail-label"><i class="fa-regular fa-user"></i> Vendedor</span>
+                <span class="feed-detail-val">${data.userNickname || data.userName || '?'}</span>
+            </div>
+            <div class="feed-detail-row">
+                <span class="feed-detail-label"><i class="fa-regular fa-clock"></i> Data e hora</span>
+                <span class="feed-detail-val">${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+            </div>
+            ${data.amount ? `<div class="feed-detail-row">
+                <span class="feed-detail-label"><i class="fa-solid fa-coins"></i> Total</span>
+                <span class="feed-detail-val feed-detail-total">${formatBRL(data.amount)}</span>
+            </div>` : ''}
+            <div class="feed-detail-row" style="flex-direction:column;gap:6px;align-items:flex-start">
+                <span class="feed-detail-label"><i class="fa-solid fa-cart-shopping"></i> Itens</span>
+                <div class="feed-detail-items">${itemsText.split(',').map(i=>`<span class="feed-detail-item-chip">${i.trim()}</span>`).join('')}</div>
+            </div>
+        </div>`;
+    openSheet('sheetFeedDetail');
+    loadFeedComments(feedId);
+}
+
+async function loadFeedComments(feedId) {
+    const list = document.getElementById('feedCommentsList');
+    list.innerHTML = '<div class="loading-state" style="padding:12px"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('feed').doc(feedId)
+            .collection('comments').orderBy('createdAt','asc').get();
+        if (snap.empty) {
+            list.innerHTML = '<div class="no-comments">Seja o primeiro a comentar!</div>';
+            return;
+        }
+        list.innerHTML = snap.docs.map(d => {
+            const c = d.data();
+            const isMe = c.userId === currentUser.uid;
+            const t = c.createdAt && c.createdAt.toDate ? c.createdAt.toDate() : new Date();
+            return `<div class="comment-item${isMe?' me':''}">
+                <div class="comment-avatar">${getInitials(c.nickname||c.name||'?')}</div>
+                <div class="comment-bubble">
+                    <div class="comment-who">${c.nickname||c.name||'?'}</div>
+                    <div class="comment-text">${c.text}</div>
+                    <div class="comment-time">${timeAgo(t)}</div>
+                </div>
+            </div>`;
+        }).join('');
+        setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+    } catch(e) {
+        list.innerHTML = `<div style="color:var(--danger);font-size:0.78rem;padding:12px;text-align:center">${e.message}</div>`;
+    }
+}
+
+async function postComment() {
+    if (!currentFeedDetailId) return;
+    const input = document.getElementById('commentInput');
+    const text = input.value.trim();
+    if (!text) return;
+    setLoading('btnSendComment', true);
+    try {
+        await db.collection('groups').doc(currentGroupId).collection('feed').doc(currentFeedDetailId)
+            .collection('comments').add({
+                text, userId: currentUser.uid,
+                name: currentUserData.name + ' ' + currentUserData.surname,
+                nickname: currentUserData.nickname,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        input.value = '';
+        loadFeedComments(currentFeedDetailId);
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnSendComment', false, '<i class="fa-solid fa-paper-plane"></i>'); }
+}
+
+/* ============================================================
+   🌙 AGENDA / LEMBRETES
+============================================================ */
+function openAgendaPage() {
+    document.getElementById('page-agenda').classList.add('active');
+    loadReminders();
+}
+function closeAgendaPage() {
+    document.getElementById('page-agenda').classList.remove('active');
+}
+function openAddReminderSheet() {
+    document.getElementById('reminderTitle').value = '';
+    document.getElementById('reminderDesc').value = '';
+    document.getElementById('reminderDate').value = new Date().toISOString().split('T')[0];
+    openSheet('sheetAddReminder');
+}
+
+async function loadReminders() {
+    const body = document.getElementById('agendaBody');
+    if (!body) return;
+    body.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('reminders')
+            .orderBy('createdAt','desc').limit(50).get();
+        if (snap.empty) {
+            body.innerHTML = `<div class="feed-empty" style="margin-top:50px">
+                <i class="fa-regular fa-calendar"></i>
+                <p style="margin-top:8px">Nenhum lembrete ainda.</p>
+                <p style="font-size:0.72rem;color:var(--text-muted)">Toque em <strong>+</strong> para criar o primeiro!</p>
+            </div>`;
+            return;
+        }
+        const now = new Date(); now.setHours(0,0,0,0);
+        const items = snap.docs.map(d => ({id:d.id,...d.data()}));
+        const upcoming = items.filter(r => !r.date || new Date(r.date+'T12:00:00') >= now);
+        const past = items.filter(r => r.date && new Date(r.date+'T12:00:00') < now);
+
+        let html = '';
+        if (upcoming.length > 0) {
+            html += `<div class="agenda-section-label">Próximos</div>`;
+            html += upcoming.map(r => renderReminderItem(r, false)).join('');
+        }
+        if (past.length > 0) {
+            html += `<div class="agenda-section-label" style="margin-top:24px;opacity:0.6">Passados</div>`;
+            html += past.map(r => renderReminderItem(r, true)).join('');
+        }
+        body.innerHTML = html;
+    } catch(e) {
+        body.innerHTML = `<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>${e.message}</p></div>`;
+    }
+}
+
+function renderReminderItem(r, isPast) {
+    const hasDate = !!r.date;
+    const dateObj = hasDate ? new Date(r.date+'T12:00:00') : null;
+    const dateStr = hasDate ? dateObj.toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Sem data específica';
+    const isToday = hasDate && dateObj.toDateString() === new Date().toDateString();
+    const canDel = isAdminOrManager() || r.createdBy === currentUser.uid;
+    return `<div class="agenda-item${isPast?' past':''}${isToday?' today':''}">
+        <div class="agenda-date-col">
+            ${hasDate ? `<div class="agenda-day">${dateObj.getDate()}</div><div class="agenda-month">${dateObj.toLocaleDateString('pt-BR',{month:'short'})}</div>` :
+            `<div class="agenda-no-date"><i class="fa-regular fa-calendar"></i></div>`}
+        </div>
+        <div class="agenda-content">
+            <div class="agenda-title">${r.title||'?'}</div>
+            ${r.desc ? `<div class="agenda-desc">${r.desc}</div>` : ''}
+            <div class="agenda-by">por ${r.createdByNickname||r.createdByName||'?'}</div>
+        </div>
+        ${canDel ? `<button class="agenda-delete-btn" onclick="deleteReminder('${r.id}')"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+    </div>`;
+}
+
+async function saveReminder() {
+    const title = document.getElementById('reminderTitle').value.trim();
+    const date = document.getElementById('reminderDate').value;
+    const desc = document.getElementById('reminderDesc').value.trim();
+    if (!title) { showToast('Informe um título', 'error'); return; }
+    setLoading('btnSaveReminder', true);
+    try {
+        await db.collection('groups').doc(currentGroupId).collection('reminders').add({
+            title, date: date||null, desc: desc||null,
+            createdBy: currentUser.uid,
+            createdByName: currentUserData.name+' '+currentUserData.surname,
+            createdByNickname: currentUserData.nickname,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Lembrete criado! 📅', 'success');
+        closeSheet('sheetAddReminder');
+        loadReminders();
+    } catch(e) { showToast('Erro: '+e.message, 'error'); }
+    finally { setLoading('btnSaveReminder', false, '<i class="fa-solid fa-check"></i> Criar Lembrete'); }
+}
+
+async function deleteReminder(id) {
+    if (!confirm('Excluir este lembrete?')) return;
+    try {
+        await db.collection('groups').doc(currentGroupId).collection('reminders').doc(id).delete();
+        showToast('Lembrete excluído', 'success');
+        loadReminders();
+    } catch(e) { showToast('Erro: '+e.message, 'error'); }
+}
+
+/* ============================================================
    PWA INSTALL LOGIC
 ============================================================ */
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -2809,7 +3502,28 @@ async function runSplash(skipIntro, userNickname) {
     splash.style.display = 'flex';
     if (userNickname) document.getElementById('splashNome').textContent = userNickname;
     splash.classList.remove('phase2','phase3','phase4','exit');
-    const waitTime = skipIntro ? 1000 : 2000;
+
+    // Particles
+    const pc = document.getElementById('splashParticles');
+    if (pc) {
+        pc.innerHTML = '';
+        for (let i = 0; i < 12; i++) {
+            const p = document.createElement('div');
+            p.className = 'splash-particle';
+            const size = 3 + Math.random() * 5;
+            p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${30+Math.random()*60}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*2}s;`;
+            pc.appendChild(p);
+        }
+    }
+
+    // Progress bar animation
+    const fill = document.getElementById('splashProgressFill');
+    const waitTime = skipIntro ? 900 : 2000;
+    if (fill) {
+        fill.style.transition = `width ${waitTime}ms linear`;
+        setTimeout(() => fill.style.width = '100%', 50);
+    }
+
     const minWait = new Promise(r => setTimeout(r, waitTime));
     const phase2Delay = skipIntro ? 100 : 800;
     setTimeout(() => splash.classList.add('phase2'), phase2Delay);
