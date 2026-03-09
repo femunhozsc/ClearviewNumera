@@ -298,7 +298,7 @@
                 </div>
 
                 <!-- Meta do Mês -->
-                <div class="goal-card" id="goalCard" onclick="openGoalSheet()" style="display:none"></div>
+                <div class="goal-card" id="goalCard" onclick="toggleGoalCard()" style="display:none"></div>
 
                 <!-- Estoque Crítico Alert -->
 
@@ -434,6 +434,7 @@
                             <i class="fa-solid fa-circle-check"></i> <span id="profileRoleText">Membro</span>
                         </div>
                     </div>
+                    <button class="navbar-btn" style="margin-left:auto; background:var(--bg); width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:10px;" onclick="openEditProfile()"><i class="fa-solid fa-pen-to-square" style="color:var(--accent)"></i></button>
                 </div>
 
                 <!-- Grupo info -->
@@ -646,6 +647,25 @@
                 <div class="fin-label">Lucro Líquido Estimado</div>
                 <div class="fin-value" id="finNetProfit">R$ 0,00</div>
             </div>
+        </div>
+
+        <!-- Gráfico de Horários -->
+        <div class="section-card">
+            <div class="section-card-title">Melhor Horário de Vendas</div>
+            <div class="feed-filters" style="margin-bottom:12px; padding-bottom:8px;">
+                <button class="feed-filter-btn active" onclick="filterSalesTime('all', this)">Todos</button>
+                <button class="feed-filter-btn" onclick="filterSalesTime(0, this)">Dom</button>
+                <button class="feed-filter-btn" onclick="filterSalesTime(1, this)">Seg</button>
+                <button class="feed-filter-btn" onclick="filterSalesTime(2, this)">Ter</button>
+                <button class="feed-filter-btn" onclick="filterSalesTime(3, this)">Qua</button>
+                <button class="feed-filter-btn" onclick="filterSalesTime(4, this)">Qui</button>
+                <button class="feed-filter-btn" onclick="filterSalesTime(5, this)">Sex</button>
+                <button class="feed-filter-btn" onclick="filterSalesTime(6, this)">Sáb</button>
+            </div>
+            <div class="chart-container" style="height:160px">
+                <canvas id="salesTimeChart"></canvas>
+            </div>
+            <div id="salesTimeSummary" style="font-size:0.75rem;color:var(--text-sec);margin-top:10px;text-align:center"></div>
         </div>
 
         <!-- Meta do Grupo -->
@@ -1165,6 +1185,51 @@
     </div>
 </div>
 
+<!-- ============================= SHEET: EDITAR PERFIL ============================= -->
+<div class="sheet-overlay" id="sheetEditProfile">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Editar Perfil</span>
+            <button class="sheet-close" onclick="closeSheet('sheetEditProfile')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div style="display:flex;justify-content:center;margin-bottom:24px">
+            <div class="profile-avatar" id="editProfileAvatarPreview" style="width:80px;height:80px;font-size:1.5rem;cursor:pointer;position:relative" onclick="document.getElementById('profilePhotoInput').click()">
+                <i class="fa-solid fa-camera"></i>
+                <div style="position:absolute;bottom:0;right:0;background:var(--accent);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;border:2px solid var(--card-bg)"><i class="fa-solid fa-plus"></i></div>
+            </div>
+            <input type="file" id="profilePhotoInput" accept="image/*" style="display:none" onchange="handleAvatarSelection(this)">
+        </div>
+
+        <div class="form-input-row">
+            <div class="form-field"><label class="form-label">Nome</label><input type="text" id="editProfName" class="form-input capitalize"></div>
+            <div class="form-field"><label class="form-label">Sobrenome</label><input type="text" id="editProfSurname" class="form-input capitalize"></div>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Apelido (Exibição)</label>
+            <input type="text" id="editProfNick" class="form-input">
+        </div>
+        <div class="form-input-row">
+            <div class="form-field"><label class="form-label">Telefone</label><input type="tel" id="editProfPhone" class="form-input" oninput="maskPhone(this)" maxlength="15"></div>
+            <div class="form-field"><label class="form-label">Cargo</label><input type="text" id="editProfCargo" class="form-input"></div>
+        </div>
+        
+        <div class="divider"></div>
+        <div class="section-label">Segurança</div>
+        
+        <div class="form-field">
+            <label class="form-label">E-mail</label>
+            <input type="email" id="editProfEmail" class="form-input">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Nova Senha (deixe em branco para manter)</label>
+            <input type="password" id="editProfPass" class="form-input" placeholder="••••••">
+        </div>
+        <button class="btn-primary" onclick="saveProfile()" id="btnSaveProfile">Salvar Alterações</button>
+    </div>
+</div>
+
 <!-- ============================= SHEET: META DO GRUPO ============================= -->
 <div class="sheet-overlay" id="sheetGroupGoal">
     <div class="sheet-content">
@@ -1253,6 +1318,9 @@
         <button class="btn-secondary" onclick="closeSheet('sheetAddReminder')">Cancelar</button>
     </div>
 </div>
+
+<!-- CONFETTI -->
+<canvas id="confetti-canvas"></canvas>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -1385,6 +1453,7 @@ let homeChartData = { week: [], month: [], year: [] };
 let currentFeedLimit = 5; // Limite inicial do feed
 let feedItemsCache = {}; // Cache para feed items (para comentários)
 let goalToggleInterval = null; // Intervalo para alternar meta
+let adminSalesTimeFilter = 'all'; // Filtro de dia da semana
 
 /* ============================================================
    UTILS
@@ -1445,6 +1514,82 @@ function showToast(msg, type='info') {
     clearTimeout(t._to);
     t._to = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+function compressImage(file, maxWidth, quality) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = event => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = error => reject(error);
+        };
+        reader.onerror = error => reject(error);
+    });
+}
+
+/* ============================================================
+   🎉 CONFETTI
+============================================================ */
+let confettiActive = false;
+function triggerConfetti() {
+    if (confettiActive) return;
+    confettiActive = true;
+    const canvas = document.getElementById('confetti-canvas');
+    if (!canvas) return;
+    
+    canvas.style.display = 'block';
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const particles = [];
+    const colors = ['#f1c40f', '#e74c3c', '#3498db', '#9b59b6', '#2ecc71', '#00388d'];
+    
+    for(let i=0; i<120; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height * 0.2 - canvas.height * 0.2,
+            vx: Math.random() * 4 - 2,
+            vy: Math.random() * 5 + 2,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: Math.random() * 6 + 3,
+            rotation: Math.random() * 360,
+            rotationSpeed: Math.random() * 10 - 5
+        });
+    }
+    
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let activeCount = 0;
+        particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy; p.rotation += p.rotationSpeed;
+            if (p.y < canvas.height) {
+                activeCount++;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation * Math.PI / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                ctx.restore();
+            }
+        });
+        if (activeCount > 0 && confettiActive) requestAnimationFrame(animate);
+        else { confettiActive = false; canvas.style.display = 'none'; }
+    }
+    animate();
+}
+
 function setLoading(btnId, loading, originalText) {
     const btn = document.getElementById(btnId);
     if (!btn) return;
@@ -1459,6 +1604,8 @@ function setLoading(btnId, loading, originalText) {
 }
 function getInitials(name) {
     if (!name) return '?';
+    // Se tiver foto no objeto global (não passado aqui, mas usado no contexto), a lógica de renderização cuida.
+    // Aqui retorna iniciais como fallback.
     const parts = name.trim().split(' ');
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -3085,6 +3232,13 @@ async function loadProfileTab() {
     const nick = currentUserData.nickname || currentUserData.name;
     const initials = getInitials(nick);
     document.getElementById('profileAvatar').textContent = initials;
+    // Foto de perfil
+    if (currentUserData.photoUrl) {
+        document.getElementById('profileAvatar').style.backgroundImage = `url('${currentUserData.photoUrl}')`;
+        document.getElementById('profileAvatar').textContent = '';
+    } else {
+        document.getElementById('profileAvatar').style.backgroundImage = 'none';
+    }
     document.getElementById('profileName').textContent = `${currentUserData.name} ${currentUserData.surname}`;
     document.getElementById('profileEmail').textContent = currentUserData.email || currentUserData.phone || '—';
     const role = currentMemberData ? currentMemberData.role : 'seller';
@@ -3105,6 +3259,73 @@ async function loadProfileTab() {
     document.getElementById('groupInfoCard').querySelector('button').style.display = isAdminOrManager() ? 'block' : 'none';
     const adminDashItem = document.getElementById('adminDashboardSettingsItem');
     if (adminDashItem) adminDashItem.style.display = isAdminOrManager() ? 'flex' : 'none';
+}
+
+/* ============================================================
+   EDIT PROFILE
+============================================================ */
+let newProfilePhotoBase64 = null;
+
+function openEditProfile() {
+    document.getElementById('editProfName').value = currentUserData.name || '';
+    document.getElementById('editProfSurname').value = currentUserData.surname || '';
+    document.getElementById('editProfNick').value = currentUserData.nickname || '';
+    document.getElementById('editProfPhone').value = currentUserData.phone || '';
+    document.getElementById('editProfCargo').value = currentUserData.cargo || '';
+    document.getElementById('editProfEmail').value = currentUserData.email || '';
+    document.getElementById('editProfPass').value = '';
+    
+    const preview = document.getElementById('editProfileAvatarPreview');
+    if (currentUserData.photoUrl) {
+        preview.style.backgroundImage = `url('${currentUserData.photoUrl}')`;
+        preview.innerHTML = ''; // Remove ícone
+    } else {
+        preview.style.backgroundImage = 'none';
+        preview.innerHTML = '<i class="fa-solid fa-camera"></i><div style="position:absolute;bottom:0;right:0;background:var(--accent);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;border:2px solid var(--card-bg)"><i class="fa-solid fa-plus"></i></div>';
+    }
+    newProfilePhotoBase64 = null;
+    openSheet('sheetEditProfile');
+}
+
+async function handleAvatarSelection(input) {
+    if (input.files && input.files[0]) {
+        try {
+            const base64 = await compressImage(input.files[0], 200, 0.7);
+            newProfilePhotoBase64 = base64;
+            const preview = document.getElementById('editProfileAvatarPreview');
+            preview.style.backgroundImage = `url('${base64}')`;
+            preview.innerHTML = '';
+        } catch (e) { showToast('Erro na imagem', 'error'); }
+    }
+}
+
+async function saveProfile() {
+    const name = document.getElementById('editProfName').value.trim();
+    const surname = document.getElementById('editProfSurname').value.trim();
+    const nickname = document.getElementById('editProfNick').value.trim();
+    const phone = document.getElementById('editProfPhone').value.trim();
+    const cargo = document.getElementById('editProfCargo').value.trim();
+    const email = document.getElementById('editProfEmail').value.trim();
+    const pass = document.getElementById('editProfPass').value;
+
+    if (!name) { showToast('Nome é obrigatório', 'error'); return; }
+    setLoading('btnSaveProfile', true);
+
+    try {
+        const updates = { name, surname, nickname, phone, cargo, email };
+        if (newProfilePhotoBase64) updates.photoUrl = newProfilePhotoBase64;
+
+        // Auth updates
+        if (email !== currentUser.email) await currentUser.updateEmail(email);
+        if (pass) await currentUser.updatePassword(pass);
+
+        await db.collection('users').doc(currentUser.uid).update(updates);
+        Object.assign(currentUserData, updates); // Update local
+        showToast('Perfil atualizado!', 'success');
+        closeSheet('sheetEditProfile');
+        loadProfileTab(); // Refresh UI
+    } catch(e) { showToast('Erro (talvez precise relogar): ' + e.message, 'error'); }
+    finally { setLoading('btnSaveProfile', false, 'Salvar Alterações'); }
 }
 
 /* ============================================================
@@ -3131,7 +3352,9 @@ async function loadMembersList() {
             const omitBadge = m.omitProfits ? ' <span style="font-size:0.6rem;color:var(--text-muted)">· Lucro Oculto</span>' : '';
             
             return `<div class="member-item" ${canEdit ? `onclick="openMemberEdit('${d.id}')"` : ''}>
-                <div class="member-avatar">${getInitials(m.nickname || m.name || '?')}</div>
+                <div class="member-avatar" style="${m.photoUrl ? `background-image:url('${m.photoUrl}');background-size:cover` : ''}">
+                    ${m.photoUrl ? '' : getInitials(m.nickname || m.name || '?')}
+                </div>
                 <div class="member-info">
                     <div class="member-name">${m.nickname || m.name || '?'} ${isMe ? '<span style="font-size:0.65rem;color:var(--accent)">(você)</span>' : ''}</div>
                     <div class="member-cargo">
@@ -3402,6 +3625,8 @@ async function generateMonthReport() {
 let adminDashFixedCosts = [];
 let adminDashVariableCosts = [];
 let finChartInstance = null;
+let salesTimeChartInstance = null;
+let adminSalesDataCache = []; // Cache para filtro de horário
 
 function openAdminDashboard() {
     if (!isAdminOrManager()) return;
@@ -3458,10 +3683,16 @@ async function loadAdminDashboard() {
         
         let revenue = 0;
         let productCost = 0;
+        adminSalesDataCache = []; // Reset cache
 
         salesSnap.docs.forEach(d => {
             const s = d.data();
             revenue += s.total || 0;
+            adminSalesDataCache.push(s); // Store for time filter
+            
+            // Time analysis
+            // (Moved to processSalesTimeData)
+
             // Calculate cost from items
             if (s.items) {
                 s.items.forEach(i => {
@@ -3496,8 +3727,33 @@ async function loadAdminDashboard() {
 
         // Render Chart
         renderFinancialChart(productCost, fixedTotal, variableTotal);
+        processSalesTimeData(); // Initial render with 'all'
 
     } catch(e) { console.error(e); }
+}
+
+function filterSalesTime(dayIndex, btn) {
+    adminSalesTimeFilter = dayIndex; // 'all' or 0-6
+    if (btn) {
+        const parent = btn.parentElement;
+        parent.querySelectorAll('.feed-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    processSalesTimeData();
+}
+
+function processSalesTimeData() {
+    const salesByHour = new Array(24).fill(0);
+    
+    adminSalesDataCache.forEach(s => {
+        if (s.createdAt) {
+            const dObj = s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+            // Filter check
+            if (adminSalesTimeFilter !== 'all' && dObj.getDay() !== adminSalesTimeFilter) return;
+            salesByHour[dObj.getHours()]++;
+        }
+    });
+    renderSalesTimeChart(salesByHour);
 }
 
 function renderFixedCosts() {
@@ -3651,6 +3907,57 @@ function renderFinancialChart(prodCost, fixedCost, varCost) {
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'bottom', labels: { color: isDark ? '#ccc' : '#555', font: {size: 10} } } }
+        }
+    });
+}
+
+function renderSalesTimeChart(data) {
+    const ctx = document.getElementById('salesTimeChart');
+    if (!ctx) return;
+    
+    // Summary
+    let maxVal = 0;
+    let bestHour = -1;
+    data.forEach((v, i) => {
+        if (v > maxVal) { maxVal = v; bestHour = i; }
+    });
+    const summaryEl = document.getElementById('salesTimeSummary');
+    if (summaryEl) {
+        if (maxVal > 0) summaryEl.innerHTML = `Pico de atividade às <strong>${bestHour}h</strong> (${maxVal} vendas)`;
+        else summaryEl.textContent = 'Sem dados de vendas neste período.';
+    }
+
+    if (salesTimeChartInstance) salesTimeChartInstance.destroy();
+    
+    const isDark = document.body.classList.contains('dark-mode');
+    
+    salesTimeChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => i + 'h'),
+            datasets: [{
+                label: 'Vendas',
+                data: data,
+                backgroundColor: isDark ? '#64b5f6' : '#0D47A1',
+                borderRadius: 3,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { display: false, beginAtZero: true },
+                x: { 
+                    grid: { display: false },
+                    ticks: { 
+                        color: isDark ? '#555' : '#9aa0a6',
+                        font: { size: 9 },
+                        maxTicksLimit: 12,
+                        autoSkip: true
+                    }
+                }
+            }
         }
     });
 }
@@ -3847,14 +4154,25 @@ async function loadMemberDashboardData(start, end) {
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando dados...</div>';
     
     try {
-        const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
-            .where('sellerId', '==', viewingMemberData.id)
-            .where('createdAt', '>=', start)
-            .where('createdAt', '<=', end)
-            .orderBy('createdAt', 'desc')
-            .get();
-        
-        const sales = snap.docs.map(d => d.data());
+        let sales = [];
+        try {
+            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+                .where('sellerId', '==', viewingMemberData.id)
+                .where('createdAt', '>=', start)
+                .where('createdAt', '<=', end)
+                .orderBy('createdAt', 'desc')
+                .get();
+            sales = snap.docs.map(d => d.data());
+        } catch (err) {
+            console.warn("Fallback member dash:", err);
+            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+                .where('sellerId', '==', viewingMemberData.id)
+                .limit(500).get();
+            sales = snap.docs.map(d => d.data()).filter(s => {
+                const d = s.createdAt.toDate();
+                return d >= start && d <= end;
+            }).sort((a,b) => b.createdAt.toDate() - a.createdAt.toDate());
+        }
         
         // Totais
         const totalVal = sales.reduce((a, s) => a + (s.total || 0), 0);
@@ -3930,6 +4248,18 @@ function renderMemberSalesChart(data) {
 ============================================================ */
 let currentGoalMode = 'personal'; // 'personal' or 'group'
 
+function toggleGoalCard() {
+    if (goalToggleInterval) {
+        clearInterval(goalToggleInterval);
+        goalToggleInterval = setInterval(() => {
+            currentGoalMode = currentGoalMode === 'personal' ? 'group' : 'personal';
+            updateGoalCardDisplay();
+        }, 10000);
+    }
+    currentGoalMode = currentGoalMode === 'personal' ? 'group' : 'personal';
+    updateGoalCardDisplay();
+}
+
 async function loadGoalCard() {
     const card = document.getElementById('goalCard');
     if (!card || !currentGroupId || !currentUser) return;
@@ -3999,6 +4329,7 @@ async function updateGoalCardDisplay() {
         card.className = `goal-card ${currentGoalMode}`;
         if (pct >= 100) {
             card.classList.add('done');
+            triggerConfetti();
         }
 
         if (goal <= 0) {
@@ -4033,9 +4364,19 @@ function renderGoalCardContent(card, mode, current, goal, pct, labelOverride, ic
                 <div class="goal-pct">${pct}%</div>
             </div>
             <div class="goal-bar-track">
-                <div class="goal-bar-fill" style="width:${pct}%"></div>
+                <div class="goal-bar-fill" style="width:0%"></div>
             </div>
         </div>`;
+    
+    // Trigger animation after render
+    requestAnimationFrame(() => {
+        const bar = card.querySelector('.goal-bar-fill');
+        if (bar) {
+            // Force reflow
+            void bar.offsetWidth; 
+            bar.style.width = `${pct}%`;
+        }
+    });
 }
 
 function openGoalSheet() {

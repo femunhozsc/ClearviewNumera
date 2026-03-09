@@ -920,6 +920,7 @@ body.dark-mode .chart-section { box-shadow:0 2px 16px rgba(0,0,0,0.2); }
     font-size:1.4rem; font-weight:700; color:var(--accent); flex-shrink:0;
     box-shadow:0 0 0 4px var(--accent-dim);
     position:relative;
+    background-size: cover; background-position: center;
 }
 .profile-avatar::after {
     content:''; position:absolute; inset:-4px;
@@ -1518,17 +1519,16 @@ footer {
 
 /* Modificadores de Tema da Meta */
 /* Pessoal (Azul) */
-.goal-card.personal .goal-pct { color: var(--accent); }
+.goal-card.personal .goal-pct { color: var(--text-main); }
 .goal-card.personal .goal-bar-fill { background: linear-gradient(90deg, var(--accent), #1976D2); }
 .goal-card.personal .goal-icon { color: var(--accent); }
-.goal-card.personal .goal-values strong { color: var(--accent); }
+.goal-card.personal .goal-values strong { color: var(--text-main); }
 
 /* Grupo (Dourado) */
-.goal-card.group { border-color: rgba(241, 196, 15, 0.3); background: linear-gradient(to bottom right, var(--card-bg), rgba(241, 196, 15, 0.05)); }
-.goal-card.group .goal-pct { color: #f1c40f; }
+.goal-card.group .goal-pct { color: var(--text-main); }
 .goal-card.group .goal-bar-fill { background: linear-gradient(90deg, #f1c40f, #b7950b); }
 .goal-card.group .goal-icon { color: #f1c40f; }
-.goal-card.group .goal-values strong { color: #f1c40f; }
+.goal-card.group .goal-values strong { color: var(--text-main); }
 
 /* Estado de Meta Concluída (Verde para ambos) */
 .goal-card.done .goal-values strong { color: var(--success); }
