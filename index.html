@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
-<body>
+<body class="dark-mode">
 
 <!-- ============================= SPLASH ============================= -->
 <div id="splash">
@@ -53,7 +53,6 @@
             <!-- PANEL 0: Main -->
             <div class="auth-panel" id="auth-main">
                 <div class="auth-panel-inner">
-                    <div class="auth-welcome-badge"><i class="fa-solid fa-chart-line"></i> Clearview Numera</div>
                     <h1 class="auth-title">Olá, gestor(a)</h1>
                     <p class="auth-subtitle">Controle vendas, estoque e equipe em um só lugar.</p>
                     <div class="auth-divider-line"></div>
@@ -487,7 +486,7 @@
                 <!-- SERVIÇOS: Equipamentos + Combustível -->
                 <div id="equipamentosView" style="display:none">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Equipamentos</h2>
+                        <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Estoque</h2>
                         <button class="navbar-btn" onclick="handleEquipExport()" title="Relatório"><i class="fa-solid fa-file-pdf"></i></button>
                     </div>
                     <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Materiais, ferramentas e controle de combustível</p>
@@ -2560,7 +2559,8 @@ function showValueToast(el) {
    THEME / DARK MODE
 ============================================================ */
 function applyInitialTheme() {
-    const isDark = localStorage.getItem('darkMode') === 'true';
+    const stored = localStorage.getItem('darkMode');
+    const isDark = stored === null ? true : stored === 'true'; // Default true (Dark Mode)
     document.body.classList.toggle('dark-mode', isDark);
     document.getElementById('darkModeToggle').classList.toggle('on', isDark);
     updateThemeColor(isDark);
@@ -6259,7 +6259,7 @@ function applyBizMode() {
     }
     if (bnStock) {
         bnStock.innerHTML = isService
-            ? '<i class="fa-solid fa-toolbox"></i> Equipamentos'
+            ? '<i class="fa-solid fa-toolbox"></i> Estoque'
             : '<i class="fa-solid fa-warehouse"></i> Estoque';
     }
 
@@ -6270,7 +6270,7 @@ function applyBizMode() {
             a.innerHTML = `<i class="fa-solid fa-${isService ? 'screwdriver-wrench' : 'box'}"></i> ${isService ? 'Serviços' : 'Produtos'}`;
         }
         if (txt.startsWith('Estoque') || txt.startsWith('Equipamento')) {
-            a.innerHTML = `<i class="fa-solid fa-${isService ? 'toolbox' : 'warehouse'}"></i> ${isService ? 'Equipamentos' : 'Estoque'}`;
+            a.innerHTML = `<i class="fa-solid fa-${isService ? 'toolbox' : 'warehouse'}"></i> Estoque`;
         }
     });
 
