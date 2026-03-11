@@ -317,8 +317,6 @@
         <!-- ===== TAB: HOME ===== -->
         <div id="tab-home" class="tab-page active">
             <div class="page-inner">
-            <div id="ptr-loader" class="ptr-loader"><i class="fa-solid fa-rotate"></i></div>
-            <div class="page-inner" id="homePageInner">
                 <!-- Header Minimalista -->
                 <div class="home-header">
                     <div>
@@ -8005,97 +8003,29 @@ window.addEventListener('load', () => {
             currentGroup = null;
             currentGroupId = null;
         }
+    });
 
-        // Auto-hide bottom nav on scroll
-        const autoHideNav = (e) => {
-            const scrollable = e.target.scrollingElement || e.target;
-            const scrollY = scrollable.scrollTop;
-            const nav = document.querySelector('.bottom-nav');
-            if (!nav) return;
+    // Auto-hide bottom nav on scroll
+    const nav = document.querySelector('.bottom-nav');
+    let lastScrollY = window.scrollY;
+    
+    const handleScroll = (e) => {
+        const currentScrollY = (e.target.scrollTop !== undefined) ? e.target.scrollTop : window.scrollY;
+        if (!nav) return;
+        
+        if (Math.abs(currentScrollY - lastScrollY) < 10) return; // Evitar jitter
 
-            const lastScrollY = parseFloat(scrollable.dataset.lastScrollY || '0');
-            const threshold = 80;
-
-            if (scrollY < threshold) {
-                nav.classList.remove('nav-hidden');
-            } else {
-                if (scrollY > lastScrollY) { // Scrolling down
-                    nav.classList.add('nav-hidden');
-                } else if (scrollY < lastScrollY) { // Scrolling up
-                    nav.classList.remove('nav-hidden');
-                }
-            }
-            scrollable.dataset.lastScrollY = scrollY;
-        };
-        window.addEventListener('scroll', autoHideNav);
-        document.querySelectorAll('.page-slide-body').forEach(el => {
-            el.addEventListener('scroll', autoHideNav);
-        });
-
-        // Pull to Refresh Logic
-        let ptrStart = 0;
-        let ptrPull = 0;
-        const homeContent = document.getElementById('homePageInner');
-        const ptrLoader = document.getElementById('ptr-loader');
-        const ptrIcon = ptrLoader ? ptrLoader.querySelector('i') : null;
-
-        if (homeContent && ptrLoader) {
-            window.addEventListener('touchstart', (e) => {
-                if (!document.getElementById('tab-home').classList.contains('active')) return;
-                // Apenas se estiver no topo absoluto
-                if (window.scrollY <= 5) {
-                    ptrStart = e.touches[0].clientY;
-                } else {
-                    ptrStart = 0;
-                }
-            }, { passive: true });
-
-            window.addEventListener('touchmove', (e) => {
-                if (!ptrStart) return;
-                const y = e.touches[0].clientY;
-                const diff = y - ptrStart;
-                
-                if (diff > 0 && window.scrollY <= 0) {
-                    if (diff < 250) { // Limite visual
-                        ptrPull = diff;
-                        homeContent.style.transform = `translateY(${Math.pow(diff, 0.85)}px)`;
-                        
-                        if (diff > 70) {
-                            ptrLoader.classList.add('visible');
-                            const rot = Math.min(360, (diff - 70) * 2.5);
-                            if (ptrIcon) ptrIcon.style.transform = `rotate(${rot}deg)`;
-                        }
-                    }
-                }
-            }, { passive: true });
-
-            window.addEventListener('touchend', async () => {
-                if (ptrStart && ptrPull > 90) {
-                    // Trigger refresh
-                    homeContent.style.transition = 'transform 0.3s ease';
-                    homeContent.style.transform = 'translateY(60px)';
-                    if (ptrIcon) ptrIcon.classList.add('fa-spin');
-                    await loadHomeData();
-                    setTimeout(() => {
-                        homeContent.style.transform = 'translateY(0)';
-                        ptrLoader.classList.remove('visible');
-                        if (ptrIcon) ptrIcon.classList.remove('fa-spin');
-                        setTimeout(() => {
-                            homeContent.style.transition = '';
-                            if (ptrIcon) ptrIcon.style.transform = 'rotate(0deg)';
-                        }, 300);
-                    }, 600);
-                } else if (ptrPull > 0) {
-                    // Cancel
-                    homeContent.style.transition = 'transform 0.2s ease';
-                    homeContent.style.transform = 'translateY(0)';
-                    ptrLoader.classList.remove('visible');
-                    setTimeout(() => homeContent.style.transition = '', 200);
-                }
-                ptrStart = 0;
-                ptrPull = 0;
-            });
+        if (currentScrollY > lastScrollY && currentScrollY > 60) {
+            nav.classList.add('nav-hidden');
+        } else if (currentScrollY < lastScrollY) {
+            nav.classList.remove('nav-hidden');
         }
+        lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.querySelectorAll('.page-slide-body').forEach(el => {
+        el.addEventListener('scroll', handleScroll, { passive: true });
     });
 });
 </script>
