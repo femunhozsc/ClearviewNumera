@@ -17,6 +17,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -216,14 +219,60 @@
             </button>
             <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:6px;margin-top:12px;">Novo Grupo</h2>
             <p style="font-size:0.8rem;color:var(--text-sec);margin-bottom:22px;">Você será o administrador deste grupo</p>
+
+            <!-- Tipo de negócio -->
+            <div class="group-field">
+                <label>Tipo de Negócio</label>
+                <div class="biz-type-grid">
+                    <div class="biz-type-card active" id="bizTypeVarejo" onclick="selectBizType('varejo')">
+                        <i class="fa-solid fa-store"></i>
+                        <span>Varejo</span>
+                        <small>Loja, comércio</small>
+                    </div>
+                    <div class="biz-type-card" id="bizTypeServicos" onclick="selectBizType('servicos')">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                        <span>Serviços</span>
+                        <small>Técnico, oficina</small>
+                    </div>
+                    <div class="biz-type-card" id="bizTypeAtacado" onclick="selectBizType('atacado')">
+                        <i class="fa-solid fa-warehouse"></i>
+                        <span>Atacado</span>
+                        <small>Distribuidora</small>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" id="groupBizType" value="varejo">
+
             <div class="group-field">
                 <label>Nome da Empresa / Grupo</label>
                 <input type="text" id="groupName" placeholder="Ex: Loja do João, Tech Solutions...">
             </div>
             <div class="group-field">
                 <label>Segmento</label>
-                <input type="text" id="groupSegmento" placeholder="Ex: Varejo, Tecnologia, Alimentação...">
+                <input type="text" id="groupSegmento" placeholder="Ex: Eletrônicos, Alimentação...">
             </div>
+
+            <!-- Localização -->
+            <div class="group-field">
+                <label><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i> Localização da Loja</label>
+                <p style="font-size:0.72rem;color:var(--text-muted);margin-bottom:10px;">Usada para comparar preços na sua região</p>
+                <div style="display:flex;gap:8px;margin-bottom:10px">
+                    <input type="text" id="groupCity" placeholder="Cidade" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text-main);font-size:0.85rem">
+                    <input type="text" id="groupState" placeholder="Estado (SP)" maxlength="2" style="width:80px;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text-main);font-size:0.85rem;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+                </div>
+                <button class="btn-secondary" style="margin:0;font-size:0.78rem;padding:10px" onclick="detectLocation()">
+                    <i class="fa-solid fa-crosshairs"></i> Detectar minha localização
+                </button>
+                <div id="locationMapContainer" style="display:none;margin-top:12px">
+                    <div id="locationMap" style="height:180px;border-radius:12px;overflow:hidden;border:1px solid var(--card-border)"></div>
+                    <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+                        <label style="font-size:0.75rem;color:var(--text-sec)">Raio de referência:</label>
+                        <input type="range" id="locationRadius" min="5" max="100" value="30" oninput="updateRadius(this.value)" style="flex:1">
+                        <span id="radiusLabel" style="font-size:0.75rem;font-weight:600;color:var(--accent);min-width:50px">30 km</span>
+                    </div>
+                </div>
+            </div>
+
             <button class="btn-primary" onclick="createGroup()" id="btnCreateGroup">
                 Criar Grupo <i class="fa-solid fa-arrow-right" style="font-size:0.75rem;margin-left:4px"></i>
             </button>
@@ -373,49 +422,115 @@
             </div>
         </div>
 
-        <!-- ===== TAB: PRODUTOS ===== -->
+        <!-- ===== TAB: PRODUTOS / SERVIÇOS ===== -->
         <div id="tab-products" class="tab-page">
             <div class="page-inner">
-                <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Produtos</h2>
-                <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Catálogo de produtos por categoria</p>
-
-                <!-- Categorias scroll -->
-                <div class="cat-scroll" id="productCatScroll">
-                    <div class="loading-state" style="padding:8px 0"><div class="loading-spinner"></div></div>
+                <!-- VAREJO / ATACADO: catálogo de produtos -->
+                <div id="productsView">
+                    <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;" id="tabProductsTitle">Produtos</h2>
+                    <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;" id="tabProductsSubtitle">Catálogo de produtos por categoria</p>
+                    <div class="cat-scroll" id="productCatScroll">
+                        <div class="loading-state" style="padding:8px 0"><div class="loading-spinner"></div></div>
+                    </div>
+                    <div id="productsList">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-box-open"></i>
+                            <h3>Nenhuma categoria selecionada</h3>
+                            <p>Selecione uma categoria acima ou crie uma nova</p>
+                        </div>
+                    </div>
                 </div>
-
-                <!-- Lista de produtos -->
-                <div id="productsList">
-                    <div class="empty-state">
-                        <i class="fa-solid fa-box-open"></i>
-                        <h3>Nenhuma categoria selecionada</h3>
-                        <p>Selecione uma categoria acima ou crie uma nova</p>
+                <!-- SERVIÇOS: catálogo de serviços -->
+                <div id="servicosView" style="display:none">
+                    <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Serviços</h2>
+                    <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Seus serviços cadastrados com tabela de preços</p>
+                    <div class="cat-scroll" id="serviceCatScroll">
+                        <div class="loading-state" style="padding:8px 0"><div class="loading-spinner"></div></div>
+                    </div>
+                    <div id="servicesList">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                            <h3>Nenhum serviço cadastrado</h3>
+                            <p>Toque no + para cadastrar seu primeiro serviço</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <!-- FAB adicionar produto -->
-            <button class="btn-fab-page" id="fabAddProduct" onclick="openAddProductSheet()" style="display:none" title="Adicionar produto">
+            <!-- FAB adicionar produto/serviço -->
+            <button class="btn-fab-page" id="fabAddProduct" onclick="openAddItemSheet()" style="display:none" title="Adicionar">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
 
-        <!-- ===== TAB: ESTOQUE ===== -->
+        <!-- ===== TAB: ESTOQUE / EQUIPAMENTOS ===== -->
         <div id="tab-stock" class="tab-page">
             <div class="page-inner">
-                <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Estoque</h2>
-                <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Controle de inventário por produto</p>
-
-                <!-- Categorias scroll -->
-                <div class="cat-scroll" id="stockCatScroll">
-                    <div class="loading-state" style="padding:8px 0"><div class="loading-spinner"></div></div>
+                <!-- VAREJO / ATACADO: estoque normal -->
+                <div id="stockView">
+                    <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Estoque</h2>
+                    <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Controle de inventário por produto</p>
+                    <div class="cat-scroll" id="stockCatScroll">
+                        <div class="loading-state" style="padding:8px 0"><div class="loading-spinner"></div></div>
+                    </div>
+                    <div id="stockList">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-warehouse"></i>
+                            <h3>Selecione uma categoria</h3>
+                            <p>Visualize o estoque filtrando por categoria</p>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Lista estoque -->
-                <div id="stockList">
-                    <div class="empty-state">
-                        <i class="fa-solid fa-warehouse"></i>
-                        <h3>Selecione uma categoria</h3>
-                        <p>Visualize o estoque filtrando por categoria</p>
+                <!-- SERVIÇOS: Equipamentos + Combustível -->
+                <div id="equipamentosView" style="display:none">
+                    <h2 style="font-size:1.2rem;font-weight:600;margin-bottom:4px;">Equipamentos</h2>
+                    <p style="font-size:0.78rem;color:var(--text-sec);margin-bottom:16px;">Materiais, ferramentas e controle de combustível</p>
+
+                    <!-- Sub-abas -->
+                    <div class="equip-tabs">
+                        <button class="equip-tab active" id="equipTabItens" onclick="switchEquipTab('itens')">
+                            <i class="fa-solid fa-toolbox"></i> Itens
+                        </button>
+                        <button class="equip-tab" id="equipTabCombustivel" onclick="switchEquipTab('combustivel')">
+                            <i class="fa-solid fa-gas-pump"></i> Combustível
+                        </button>
+                    </div>
+
+                    <!-- Seção: Itens -->
+                    <div id="equipItensSection">
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                            <button class="btn-secondary" style="margin:0;padding:8px 14px;font-size:0.78rem" onclick="openAddEquipmentSheet()">
+                                <i class="fa-solid fa-plus"></i> Adicionar Item
+                            </button>
+                        </div>
+                        <div id="equipItemsList">
+                            <div class="empty-state">
+                                <i class="fa-solid fa-toolbox"></i>
+                                <h3>Nenhum item ainda</h3>
+                                <p>Adicione materiais, ferramentas ou insumos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção: Combustível -->
+                    <div id="equipCombustivelSection" style="display:none">
+                        <!-- Cards de estatísticas -->
+                        <div id="fuelStatsCards" style="margin-bottom:16px"></div>
+                        <!-- Botão adicionar -->
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                            <button class="btn-secondary" style="margin:0;padding:8px 14px;font-size:0.78rem" onclick="openAddFuelSheet()">
+                                <i class="fa-solid fa-plus"></i> Registrar Abastecimento
+                            </button>
+                        </div>
+                        <!-- Histórico de abastecimentos -->
+                        <div class="section-label" style="margin-bottom:10px">Histórico</div>
+                        <div id="fuelHistoryList">
+                            <div class="empty-state">
+                                <i class="fa-solid fa-gas-pump"></i>
+                                <h3>Nenhum abastecimento</h3>
+                                <p>Registre seus abastecimentos para ver a média</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -441,10 +556,17 @@
                 <div class="section-card" id="groupInfoCard">
                     <div class="section-card-title">
                         <span>Meu Grupo</span>
-                        <button onclick="openInviteSheet()">Convidar</button>
+                        <div style="display:flex;gap:8px">
+                            <button id="btnEditGroupProfile" onclick="openEditGroupSheet()" style="display:none"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="openInviteSheet()">Convidar</button>
+                        </div>
                     </div>
-                    <div style="font-size:0.9rem;font-weight:500" id="groupInfoName">—</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                        <div style="font-size:0.9rem;font-weight:500" id="groupInfoName">—</div>
+                        <span id="groupTypeBadge" class="group-type-badge"></span>
+                    </div>
                     <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px" id="groupInfoSeg">—</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px" id="groupInfoLocation"><i class="fa-solid fa-location-dot"></i> —</div>
                     <div style="display:flex;gap:8px;margin-top:12px" id="groupInfoMeta">
                         <div style="flex:1;background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;text-align:center">
                             <div style="font-size:1rem;font-weight:600" id="groupMemberCount">0</div>
@@ -452,7 +574,7 @@
                         </div>
                         <div style="flex:1;background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;text-align:center">
                             <div style="font-size:1rem;font-weight:600" id="groupProductCount">0</div>
-                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Produtos</div>
+                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px" id="groupProductLabel">Produtos</div>
                         </div>
                     </div>
                 </div>
@@ -481,6 +603,14 @@
                         <div class="settings-text">
                             <h4>Dashboard Financeiro</h4>
                             <p>Custos, lucros e relatórios</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right settings-arrow"></i>
+                    </div>
+                    <div class="settings-item" onclick="openEditGroupSheet()" id="editGroupSettingsItem" style="display:none">
+                        <div class="settings-icon" style="background:rgba(255,204,0,0.1)"><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i></div>
+                        <div class="settings-text">
+                            <h4>Editar Grupo</h4>
+                            <p>Localização, nome e tipo</p>
                         </div>
                         <i class="fa-solid fa-chevron-right settings-arrow"></i>
                     </div>
@@ -797,7 +927,8 @@
             <span class="sheet-title">Registrar</span>
             <button class="sheet-close" onclick="closeSheet('sheetRegister')"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="register-options">
+        <!-- VAREJO / ATACADO -->
+        <div class="register-options" id="registerOptionsDefault">
             <div class="register-option sale" onclick="openSaleSheet()">
                 <i class="fa-solid fa-cart-shopping"></i>
                 <h3>Venda</h3>
@@ -817,6 +948,29 @@
                 <i class="fa-solid fa-tag"></i>
                 <h3>Produto</h3>
                 <p>Cadastrar novo produto</p>
+            </div>
+        </div>
+        <!-- SERVIÇOS -->
+        <div class="register-options" id="registerOptionsServicos" style="display:none">
+            <div class="register-option sale" onclick="openNewOSSheet()">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <h3>Nova OS</h3>
+                <p>Lançar ordem de serviço</p>
+            </div>
+            <div class="register-option stock" onclick="closeSheet('sheetRegister');openAddFuelSheet()">
+                <i class="fa-solid fa-gas-pump"></i>
+                <h3>Abastecimento</h3>
+                <p>Registrar abastecimento</p>
+            </div>
+            <div class="register-option notice" onclick="openNoticeSheet()">
+                <i class="fa-solid fa-bullhorn"></i>
+                <h3>Aviso</h3>
+                <p>Comunicado para a equipe</p>
+            </div>
+            <div class="register-option product" onclick="closeSheet('sheetRegister');switchTab('products')">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                <h3>Serviço</h3>
+                <p>Cadastrar novo serviço</p>
             </div>
         </div>
     </div>
@@ -915,6 +1069,30 @@
                 <span class="cart-total-label">Total da venda</span>
                 <span class="cart-total-value" id="cartTotal">R$ 0,00</span>
             </div>
+            <!-- Atacado: CNPJ cliente -->
+            <div id="saleClientFields" style="display:none">
+                <div class="form-field" style="margin-top:8px">
+                    <label class="form-label"><i class="fa-solid fa-building" style="color:var(--accent);font-size:0.75rem"></i> Cliente / Empresa</label>
+                    <input type="text" id="saleClientName" class="form-input" placeholder="Nome do cliente / empresa">
+                </div>
+                <div class="form-field">
+                    <label class="form-label">CNPJ (opcional)</label>
+                    <input type="text" id="saleClientCnpj" class="form-input" placeholder="00.000.000/0001-00" oninput="maskCnpj(this)" maxlength="18">
+                </div>
+            </div>
+            <!-- Serviços: Técnico e horas -->
+            <div id="saleServiceFields" style="display:none">
+                <div class="form-input-row" style="margin-top:8px">
+                    <div class="form-field">
+                        <label class="form-label"><i class="fa-solid fa-user-gear" style="color:var(--accent);font-size:0.75rem"></i> Técnico</label>
+                        <input type="text" id="saleTechnician" class="form-input" placeholder="Nome do técnico">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label"><i class="fa-regular fa-clock" style="color:var(--accent);font-size:0.75rem"></i> Horas</label>
+                        <input type="number" id="saleHours" class="form-input" placeholder="0" min="0" step="0.5">
+                    </div>
+                </div>
+            </div>
             <textarea class="cart-note-input" id="saleNote" rows="2" placeholder="Observação (opcional)..."></textarea>
             <button class="btn-primary" onclick="confirmSale()" id="btnConfirmSale">
                 <i class="fa-solid fa-check"></i> Confirmar Venda
@@ -952,7 +1130,300 @@
     </div>
 </div>
 
-<!-- ============================= SHEET: GERENCIAR CATEGORIAS ============================= -->
+<!-- ============================= SHEET: CADASTRAR SERVIÇO ============================= -->
+<div class="sheet-overlay" id="sheetAddService">
+    <div class="sheet-content" style="max-height:92vh">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title" id="addServiceSheetTitle">Cadastrar Serviço</span>
+            <button class="sheet-close" onclick="closeSheet('sheetAddService')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <input type="hidden" id="editServiceId" value="">
+        <div class="form-field">
+            <label class="form-label">Categoria</label>
+            <select id="addServiceCat" class="form-select" onchange="checkNewServiceCat(this)">
+                <option value="">Selecionar categoria...</option>
+                <option value="__new__">+ Nova categoria</option>
+            </select>
+        </div>
+        <div class="form-field" id="newServiceCatField" style="display:none">
+            <label class="form-label">Nome da nova categoria</label>
+            <input type="text" id="newServiceCatName" class="form-input" placeholder="Ex: Elétrico, Mecânica, Transporte...">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Nome do Serviço</label>
+            <input type="text" id="addServiceName" class="form-input" placeholder="Ex: Reboque, Instalação elétrica, Troca de óleo...">
+        </div>
+        <div class="service-rate-banner">
+            <i class="fa-solid fa-circle-info"></i> Preencha os valores padrão. Na OS eles aparecem pré-preenchidos e podem ser editados.
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label"><i class="fa-regular fa-clock" style="color:var(--accent);font-size:0.7rem"></i> Valor / Hora (R$)</label>
+                <input type="text" id="addServiceHourRate" class="form-input" placeholder="0,00" oninput="maskMoney(this);calcServicePreview()">
+            </div>
+            <div class="form-field">
+                <label class="form-label"><i class="fa-solid fa-location-dot" style="color:var(--accent);font-size:0.7rem"></i> Valor de Saída (R$)</label>
+                <input type="text" id="addServiceDeparture" class="form-input" placeholder="0,00" oninput="maskMoney(this);calcServicePreview()">
+            </div>
+        </div>
+        <div class="form-field">
+            <label class="form-label"><i class="fa-solid fa-plus-circle" style="color:var(--accent);font-size:0.7rem"></i> Adicional Padrão (R$)</label>
+            <input type="text" id="addServiceAdditional" class="form-input" placeholder="0,00 (opcional)" oninput="maskMoney(this);calcServicePreview()">
+        </div>
+        <!-- Preview do cálculo -->
+        <div class="service-calc-preview" id="serviceCalcPreview" style="display:none">
+            <div class="scp-title"><i class="fa-solid fa-calculator"></i> Prévia: 1 hora de trabalho</div>
+            <div class="scp-formula" id="scpFormula">—</div>
+            <div class="scp-total" id="scpTotal">R$ 0,00</div>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Descrição do Serviço (opcional)</label>
+            <textarea id="addServiceDesc" class="form-textarea" rows="2" placeholder="Descreva o serviço, materiais inclusos, etc..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveService()" id="btnSaveService">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Serviço
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetAddService')">Cancelar</button>
+    </div>
+</div>
+
+<!-- ============================= SHEET: NOVA OS (ORDEM DE SERVIÇO) ============================= -->
+<div class="sheet-overlay" id="sheetNewOS">
+    <div class="sheet-content" style="max-height:92vh">
+        <div class="sheet-handle"></div>
+
+        <!-- Step 1: Selecionar serviço -->
+        <div class="sale-step active" id="osStep1">
+            <div class="sheet-header">
+                <span class="sheet-title">Nova OS</span>
+                <button class="sheet-close" onclick="closeSheet('sheetNewOS')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-sec);margin-bottom:16px">Selecione o serviço a ser realizado</p>
+            <div class="sale-cat-grid" id="osCatGrid">
+                <div class="loading-state" style="grid-column:span 2"><div class="loading-spinner"></div></div>
+            </div>
+            <button class="btn-secondary" style="margin-top:8px" onclick="openOSManualStep()">
+                <i class="fa-solid fa-pen"></i> OS Manual (sem serviço cadastrado)
+            </button>
+        </div>
+
+        <!-- Step 2: Selecionar serviço da categoria -->
+        <div class="sale-step" id="osStep2">
+            <div class="sale-step-header">
+                <button class="sale-step-back" onclick="goOSStep(1)"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="sale-step-title" id="osStep2CatName">Serviços</span>
+                <button class="sheet-close" onclick="closeSheet('sheetNewOS')" style="margin-left:auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="osServiceList" class="sale-product-list">
+                <div class="loading-state"><div class="loading-spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- Step 3: Detalhes da OS -->
+        <div class="sale-step" id="osStep3">
+            <div class="sale-step-header">
+                <button class="sale-step-back" onclick="goOSStep(1)"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="sale-step-title">Detalhes da OS</span>
+                <button class="sheet-close" onclick="closeSheet('sheetNewOS')" style="margin-left:auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <!-- Card do serviço selecionado -->
+            <div class="os-service-card" id="osServiceCard">
+                <div class="os-service-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                <div>
+                    <div class="os-service-name" id="osSelectedServiceName">—</div>
+                    <div class="os-service-cat" id="osSelectedServiceCat">—</div>
+                </div>
+            </div>
+            <input type="hidden" id="osSelectedServiceId">
+
+            <!-- Campos editáveis (sugestões em cinza pré-preenchidas) -->
+            <div class="os-hint-label"><i class="fa-solid fa-lightbulb"></i> Valores pré-preenchidos do serviço — edite conforme necessário</div>
+
+            <div class="form-input-row">
+                <div class="form-field">
+                    <label class="form-label"><i class="fa-regular fa-clock" style="color:var(--accent);font-size:0.7rem"></i> Horas Trabalhadas</label>
+                    <input type="number" id="osHours" class="form-input os-suggestion" placeholder="1" min="0" step="0.5" oninput="calcOSTotal()">
+                </div>
+                <div class="form-field">
+                    <label class="form-label"><i class="fa-solid fa-location-dot" style="color:var(--accent);font-size:0.7rem"></i> Valor Saída (R$)</label>
+                    <input type="text" id="osDeparture" class="form-input os-suggestion" placeholder="0,00" oninput="maskMoney(this);calcOSTotal()">
+                </div>
+            </div>
+            <div class="form-input-row">
+                <div class="form-field">
+                    <label class="form-label"><i class="fa-solid fa-plus-circle" style="color:var(--accent);font-size:0.7rem"></i> Adicional (R$)</label>
+                    <input type="text" id="osAdditional" class="form-input" placeholder="0,00 (opcional)" oninput="maskMoney(this);calcOSTotal()">
+                </div>
+                <div class="form-field">
+                    <label class="form-label"><i class="fa-solid fa-user-gear" style="color:var(--accent);font-size:0.7rem"></i> Técnico</label>
+                    <input type="text" id="osTechnician" class="form-input" placeholder="Nome do técnico">
+                </div>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Cliente</label>
+                <input type="text" id="osClient" class="form-input" placeholder="Nome do cliente">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Descrição do serviço realizado</label>
+                <textarea id="osDescription" class="form-textarea" rows="2" placeholder="Descreva o que foi feito, peças usadas, observações..."></textarea>
+            </div>
+            <!-- Total calculado em tempo real -->
+            <div class="os-total-card">
+                <div class="os-total-breakdown" id="osTotalBreakdown">—</div>
+                <div class="os-total-label">Total da OS</div>
+                <div class="os-total-value" id="osTotalValue">R$ 0,00</div>
+            </div>
+            <button class="btn-primary" onclick="confirmOS()" id="btnConfirmOS">
+                <i class="fa-solid fa-check"></i> Confirmar OS
+            </button>
+            <button class="btn-secondary" onclick="goOSStep(1)">Trocar Serviço</button>
+        </div>
+
+        <!-- Step Manual: OS sem serviço cadastrado -->
+        <div class="sale-step" id="osStepManual">
+            <div class="sale-step-header">
+                <button class="sale-step-back" onclick="goOSStep(1)"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="sale-step-title">OS Manual</span>
+                <button class="sheet-close" onclick="closeSheet('sheetNewOS')" style="margin-left:auto"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Nome do Serviço</label>
+                <input type="text" id="osManualName" class="form-input" placeholder="Ex: Reparo hidráulico, Instalação...">
+            </div>
+            <div class="form-input-row">
+                <div class="form-field">
+                    <label class="form-label">Valor Total (R$)</label>
+                    <input type="text" id="osManualTotal" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Técnico</label>
+                    <input type="text" id="osManualTechnician" class="form-input" placeholder="Nome">
+                </div>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Cliente</label>
+                <input type="text" id="osManualClient" class="form-input" placeholder="Nome do cliente">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Descrição</label>
+                <textarea id="osManualDesc" class="form-textarea" rows="3" placeholder="Descreva o serviço realizado..."></textarea>
+            </div>
+            <button class="btn-primary" onclick="confirmOSManual()" id="btnConfirmOSManual">
+                <i class="fa-solid fa-check"></i> Registrar OS
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================= SHEET: ADICIONAR EQUIPAMENTO ============================= -->
+<div class="sheet-overlay" id="sheetAddEquipment">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title" id="addEquipTitle">Adicionar Item</span>
+            <button class="sheet-close" onclick="closeSheet('sheetAddEquipment')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <input type="hidden" id="editEquipId" value="">
+        <div class="form-field">
+            <label class="form-label">Nome do Item</label>
+            <input type="text" id="equipName" class="form-input" placeholder="Ex: Fita adesiva, Placa de ferro, Serra circular...">
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label">Quantidade</label>
+                <input type="number" id="equipQty" class="form-input" placeholder="1" min="0" value="1">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Unidade</label>
+                <select id="equipUnit" class="form-select">
+                    <option value="un">un</option>
+                    <option value="kg">kg</option>
+                    <option value="m">m</option>
+                    <option value="l">L</option>
+                    <option value="cx">cx</option>
+                    <option value="pct">pct</option>
+                    <option value="rolo">rolo</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Categoria / Local</label>
+            <input type="text" id="equipCategory" class="form-input" placeholder="Ex: Ferramentas, Elétrico, Consumíveis...">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Observações (opcional)</label>
+            <textarea id="equipNotes" class="form-textarea" rows="2" placeholder="Marca, modelo, onde fica..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveEquipment()" id="btnSaveEquipment">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetAddEquipment')">Cancelar</button>
+    </div>
+</div>
+
+<!-- ============================= SHEET: ABASTECIMENTO ============================= -->
+<div class="sheet-overlay" id="sheetAddFuel">
+    <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Registrar Abastecimento</span>
+            <button class="sheet-close" onclick="closeSheet('sheetAddFuel')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="form-field">
+            <label class="form-label"><i class="fa-solid fa-car" style="color:var(--accent);font-size:0.7rem"></i> Veículo / Equipamento</label>
+            <input type="text" id="fuelVehicle" class="form-input" placeholder="Ex: Ford Ka, Moto, Gerador...">
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label">Data</label>
+                <input type="date" id="fuelDate" class="form-input">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Tipo</label>
+                <select id="fuelType" class="form-select">
+                    <option value="gasolina">Gasolina</option>
+                    <option value="etanol">Etanol</option>
+                    <option value="diesel">Diesel</option>
+                    <option value="gnv">GNV</option>
+                    <option value="eletrico">Elétrico</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label">KM Atual</label>
+                <input type="number" id="fuelKmAtual" class="form-input" placeholder="0" min="0" oninput="calcKmRodados()">
+            </div>
+            <div class="form-field">
+                <label class="form-label">KM Rodados</label>
+                <input type="number" id="fuelKmRodados" class="form-input" placeholder="(calculado)" min="0" readonly style="background:var(--input-bg);opacity:0.7">
+            </div>
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label">Litros</label>
+                <input type="number" id="fuelLitros" class="form-input" placeholder="0,0" min="0" step="0.01" oninput="calcFuelPrice()">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Valor Total (R$)</label>
+                <input type="text" id="fuelValor" class="form-input" placeholder="0,00" oninput="maskMoney(this);calcFuelPrice()">
+            </div>
+        </div>
+        <!-- Preço por litro calculado -->
+        <div class="fuel-price-tag" id="fuelPriceTag" style="display:none">
+            <i class="fa-solid fa-tag"></i> <span id="fuelPricePerLiter">—</span> / litro
+        </div>
+        <div class="form-field">
+            <label class="form-label">Observações (opcional)</label>
+            <input type="text" id="fuelNotes" class="form-input" placeholder="Posto, cidade...">
+        </div>
+        <button class="btn-primary" onclick="saveFuel()" id="btnSaveFuel">
+            <i class="fa-solid fa-floppy-disk"></i> Registrar
+        </button>
+        <button class="btn-secondary" onclick="closeSheet('sheetAddFuel')">Cancelar</button>
+    </div>
+</div>
 <div class="sheet-overlay" id="sheetCategoryManager">
     <div class="sheet-content">
         <div class="sheet-handle"></div>
@@ -977,7 +1448,7 @@
     <div class="sheet-content" style="max-height:92vh">
         <div class="sheet-handle"></div>
         <div class="sheet-header">
-            <span class="sheet-title">Cadastrar Produto</span>
+            <span class="sheet-title" id="addProductSheetTitle">Cadastrar Produto</span>
             <button class="sheet-close" onclick="closeSheet('sheetAddProduct')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <input type="hidden" id="editProductId" value="">
@@ -992,10 +1463,23 @@
             <label class="form-label">Nome da nova categoria</label>
             <input type="text" id="newCatName" class="form-input" placeholder="Ex: Celulares, Eletrodomésticos...">
         </div>
-        <div class="form-field">
-            <label class="form-label">Nome do Produto</label>
-            <input type="text" id="addProductName" class="form-input" placeholder="Ex: Camiseta Básica, Consultoria...">
+
+        <!-- Campo Marca com Autocomplete -->
+        <div class="form-field" style="position:relative">
+            <label class="form-label"><i class="fa-solid fa-tag" style="color:var(--accent);font-size:0.75rem"></i> Marca</label>
+            <input type="text" id="addProductBrand" class="form-input" placeholder="Ex: Apple, Samsung, Nike..." autocomplete="off"
+                oninput="onBrandInput(this.value)" onblur="setTimeout(()=>closeSuggestions('brandSuggestions'),200)">
+            <div id="brandSuggestions" class="autocomplete-dropdown" style="display:none"></div>
         </div>
+
+        <!-- Campo Nome do Produto com Autocomplete -->
+        <div class="form-field" style="position:relative">
+            <label class="form-label">Nome do Produto</label>
+            <input type="text" id="addProductName" class="form-input" placeholder="Ex: iPhone 14, Xbox One S..." autocomplete="off"
+                oninput="onProductNameInput(this.value)" onblur="setTimeout(()=>closeSuggestions('productNameSuggestions'),200)">
+            <div id="productNameSuggestions" class="autocomplete-dropdown" style="display:none"></div>
+        </div>
+
         <div class="form-field">
             <label class="form-label">Modelo / Variante</label>
             <input type="text" id="addProductModel" class="form-input" placeholder="Ex: Tamanho M, Azul, 110v...">
@@ -1003,13 +1487,25 @@
         <div class="form-input-row">
             <div class="form-field">
                 <label class="form-label">Preço de Venda (R$)</label>
-                <input type="text" id="addProductSalePrice" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+                <input type="text" id="addProductSalePrice" class="form-input" placeholder="0,00" oninput="maskMoney(this);onSalePriceChange()">
             </div>
             <div class="form-field">
                 <label class="form-label">Preço de Custo (R$)</label>
                 <input type="text" id="addProductCostPrice" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
             </div>
         </div>
+
+        <!-- Painel de Inteligência de Preços da Região -->
+        <div id="priceIntelPanel" class="price-intel-panel" style="display:none">
+            <div class="price-intel-header">
+                <i class="fa-solid fa-chart-line"></i> Inteligência de Mercado
+                <span id="priceIntelLoading" class="price-intel-loading" style="display:none"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+            </div>
+            <div id="priceIntelBody">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+
         <div class="form-input-row">
             <div class="form-field">
                 <label class="form-label">Unidade</label>
@@ -1023,6 +1519,7 @@
                     <option value="m2">Metros² (m²)</option>
                     <option value="cx">Caixas</option>
                     <option value="pct">Pacotes</option>
+                    <option value="h">Horas (h)</option>
                 </select>
             </div>
             <div class="form-field">
@@ -1030,6 +1527,22 @@
                 <input type="number" id="addProductStock" class="form-input" placeholder="0" value="0" min="0">
             </div>
         </div>
+
+        <!-- Atacado: Preço por quantidade -->
+        <div id="wholesalePricingSection" style="display:none">
+            <div class="section-label" style="margin-bottom:8px"><i class="fa-solid fa-layer-group" style="color:var(--accent)"></i> Preços por Volume</div>
+            <div id="wholesaleTiers">
+                <div class="wholesale-tier-row">
+                    <input type="number" placeholder="Qtd mín" class="form-input wt-qty" style="width:80px" value="10">
+                    <input type="text" placeholder="Preço/un" class="form-input wt-price" oninput="maskMoney(this)">
+                    <button class="btn-icon-sm" onclick="removeWholesaleTier(this)"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <button class="btn-secondary" style="margin-top:6px;font-size:0.75rem;padding:8px" onclick="addWholesaleTier()">
+                <i class="fa-solid fa-plus"></i> Adicionar faixa
+            </button>
+        </div>
+
         <div class="form-field">
             <label class="form-label">Descrição (opcional)</label>
             <textarea id="addProductDesc" class="form-textarea" rows="2" placeholder="Descrição do produto..."></textarea>
@@ -1353,6 +1866,68 @@
     </div>
 </div>
 
+<!-- ============================= SHEET: EDITAR GRUPO ============================= -->
+<div class="sheet-overlay" id="sheetEditGroup">
+    <div class="sheet-content" style="max-height:92vh">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <span class="sheet-title">Editar Grupo</span>
+            <button class="sheet-close" onclick="closeSheet('sheetEditGroup')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="form-field">
+            <label class="form-label">Nome do Grupo</label>
+            <input type="text" id="editGroupName" class="form-input">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Segmento</label>
+            <input type="text" id="editGroupSegmento" class="form-input">
+        </div>
+        <div class="form-field">
+            <label class="form-label">Tipo de Negócio</label>
+            <div class="biz-type-grid">
+                <div class="biz-type-card" id="editBizTypeVarejo" onclick="selectEditBizType('varejo')">
+                    <i class="fa-solid fa-store"></i><span>Varejo</span>
+                </div>
+                <div class="biz-type-card" id="editBizTypeServicos" onclick="selectEditBizType('servicos')">
+                    <i class="fa-solid fa-screwdriver-wrench"></i><span>Serviços</span>
+                </div>
+                <div class="biz-type-card" id="editBizTypeAtacado" onclick="selectEditBizType('atacado')">
+                    <i class="fa-solid fa-warehouse"></i><span>Atacado</span>
+                </div>
+            </div>
+            <input type="hidden" id="editGroupBizType" value="varejo">
+        </div>
+        <div class="form-field">
+            <label class="form-label"><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i> Localização</label>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+                <input type="text" id="editGroupCity" class="form-input" placeholder="Cidade" style="flex:1">
+                <input type="text" id="editGroupState" class="form-input" placeholder="SP" maxlength="2" style="width:70px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <button class="btn-secondary" style="margin:0;font-size:0.78rem;padding:10px" onclick="detectLocationEdit()">
+                <i class="fa-solid fa-crosshairs"></i> Detectar minha localização
+            </button>
+            <div id="editLocationMapContainer" style="display:none;margin-top:12px">
+                <div id="editLocationMap" style="height:160px;border-radius:12px;overflow:hidden;border:1px solid var(--card-border)"></div>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+                    <label style="font-size:0.75rem;color:var(--text-sec)">Raio:</label>
+                    <input type="range" id="editLocationRadius" min="5" max="100" value="30" oninput="updateEditRadius(this.value)" style="flex:1">
+                    <span id="editRadiusLabel" style="font-size:0.75rem;font-weight:600;color:var(--accent);min-width:50px">30 km</span>
+                </div>
+            </div>
+        </div>
+        <!-- Atacado: Pedido mínimo -->
+        <div id="editWholesaleSection" style="display:none">
+            <div class="form-field">
+                <label class="form-label"><i class="fa-solid fa-box-open" style="color:var(--accent);font-size:0.75rem"></i> Pedido Mínimo (R$)</label>
+                <input type="text" id="editMinOrder" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
+            </div>
+        </div>
+        <button class="btn-primary" onclick="saveEditGroup()" id="btnSaveEditGroup">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+        </button>
+    </div>
+</div>
+
 <!-- ============================= FIREBASE + JS ============================= -->
 <!-- Firebase SDK Compat -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1410,6 +1985,30 @@
            allow read: if request.auth != null;
            allow write: if request.auth != null;
          }
+         match /equipment/{equipId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /fuel/{fuelId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /reminders/{reminderId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /expenses/{expenseId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+         match /settings/{settingId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null;
+         }
+       }
+       match /globalData/{document=**} {
+         allow read: if request.auth != null;
+         allow write: if request.auth != null;
        }
      }
    }
@@ -1871,12 +2470,20 @@ function showGroupJoin() {
 async function createGroup() {
     const name = document.getElementById('groupName').value.trim();
     const seg = document.getElementById('groupSegmento').value.trim();
+    const bizType = document.getElementById('groupBizType').value || 'varejo';
+    const city = (document.getElementById('groupCity').value || '').trim();
+    const state = (document.getElementById('groupState').value || '').trim().toUpperCase();
+    const radius = parseInt(document.getElementById('locationRadius')?.value || 30);
+    const lat = parseFloat(document.getElementById('locationRadius')?.dataset.lat || 0);
+    const lng = parseFloat(document.getElementById('locationRadius')?.dataset.lng || 0);
+
     if (!name) { showToast('Digite o nome do grupo', 'error'); return; }
     setLoading('btnCreateGroup', true);
     try {
         const code = generateCode();
         const groupRef = await db.collection('groups').add({
-            name, segmento: seg,
+            name, segmento: seg, bizType,
+            location: { city, state, country: 'brasil', lat, lng, radius },
             code, ownerId: currentUser.uid,
             productCounter: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1898,6 +2505,7 @@ async function createGroup() {
         currentUserData.groupId = groupRef.id;
         showToast('Grupo criado com sucesso!', 'success');
         await loadGroup(groupRef.id);
+        applyBizMode();
         startApp();
     } catch(e) {
         showToast('Erro ao criar grupo: ' + e.message, 'error');
@@ -1958,10 +2566,18 @@ function switchTab(name) {
     document.getElementById('tab-' + name).classList.add('active');
     const btn = document.getElementById('bn-' + name);
     if (btn) btn.classList.add('active');
+    const bizType = currentGroup?.bizType || 'varejo';
+    const isService = bizType === 'servicos';
     // Load tab data
     if (name === 'home') loadHomeData();
-    if (name === 'products') loadProductsTab();
-    if (name === 'stock') loadStockTab();
+    if (name === 'products') {
+        if (isService) loadServicosTab();
+        else loadProductsTab();
+    }
+    if (name === 'stock') {
+        if (isService) loadEquipamentosTab();
+        else loadStockTab();
+    }
     if (name === 'profile') loadProfileTab();
 }
 function openSideNav() {
@@ -1981,6 +2597,11 @@ function closeSheet(id) {
 function openRegisterSheet() {
     closeSheet('sheetSale'); closeSheet('sheetNotice');
     openSheet('sheetRegister');
+}
+function openAddItemSheet() {
+    const bizType = currentGroup?.bizType || 'varejo';
+    if (bizType === 'servicos') openAddServiceSheet();
+    else openAddProductSheet();
 }
 
 /* ============================================================
@@ -2573,9 +3194,6 @@ async function loadMyDashGoal() {
 /* ============================================================
    REGISTRAR SHEET
 ============================================================ */
-function openRegisterSheet() {
-    openSheet('sheetRegister');
-}
 
 /* ============================================================
    SALE FLOW
@@ -2713,12 +3331,22 @@ async function confirmSale() {
     try {
         const total = cart.reduce((a, c) => a + c.price * c.qty, 0);
         const note = document.getElementById('saleNote').value.trim();
-        
-        // Fetch current costs for items to freeze them in sale record
-        // This is crucial for accurate profit reports later
-        // Since cart items might not have cost, we rely on what was loaded or fetch now.
-        // For simplicity/speed, we assume cart items have cost if we loaded them.
-        // *Update adjustCart/loadSaleProducts to include cost*
+        const bizType = currentGroup?.bizType || 'varejo';
+
+        // Atacado: campos do cliente
+        const clientName = bizType === 'atacado' ? (document.getElementById('saleClientName')?.value.trim() || '') : '';
+        const clientCnpj = bizType === 'atacado' ? (document.getElementById('saleClientCnpj')?.value.trim() || '') : '';
+
+        // Serviços: técnico e horas
+        const technician = bizType === 'servicos' ? (document.getElementById('saleTechnician')?.value.trim() || '') : '';
+        const hours = bizType === 'servicos' ? (parseFloat(document.getElementById('saleHours')?.value) || 0) : 0;
+
+        // Atacado: verificar pedido mínimo
+        if (bizType === 'atacado' && currentGroup.minOrder > 0 && total < currentGroup.minOrder) {
+            showToast(`Pedido mínimo: ${formatBRL(currentGroup.minOrder)}`, 'error');
+            setLoading('btnConfirmSale', false, '<i class="fa-solid fa-check"></i> Confirmar Venda');
+            return;
+        }
         
         const saleData = {
             items: cart.map(c => ({ 
@@ -2726,15 +3354,17 @@ async function confirmSale() {
                 productName: c.name, 
                 qty: c.qty, 
                 price: c.price, 
-                cost: c.cost || 0, // Save cost at moment of sale
+                cost: c.cost || 0,
                 unit: c.unit 
             })),
-            total, note,
+            total, note, bizType,
+            clientName, clientCnpj,
+            technician, hours,
             sellerId: currentUser.uid,
             sellerName: currentUserData.name + ' ' + currentUserData.surname,
             sellerNickname: currentUserData.nickname,
             groupId: currentGroupId,
-            createdAt: firebase.firestore.Timestamp.fromDate(appDate) // Usa data selecionada
+            createdAt: firebase.firestore.Timestamp.fromDate(appDate)
         };
         await db.collection('groups').doc(currentGroupId).collection('sales').add(saleData);
         // Decrementar estoque
@@ -2751,11 +3381,15 @@ async function confirmSale() {
         await batch.commit();
         // Feed
         const itemsDesc = cart.map(c => `${c.qty}× ${c.name}`).join(', ');
-        await addToFeed('sale', `Registrou venda: ${itemsDesc}`, { amount: total });
+        const clientInfo = clientName ? ` · Cliente: ${clientName}` : '';
+        const techInfo = technician ? ` · Técnico: ${technician}` : '';
+        await addToFeed('sale', `Registrou venda: ${itemsDesc}${clientInfo}${techInfo}`, { amount: total });
         showToast('Venda registrada!', 'success');
         closeSheet('sheetSale');
         cart = [];
-        _homeDataCache = null; // invalidate cache
+        // Limpar campos extras
+        ['saleClientName','saleClientCnpj','saleTechnician','saleHours'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+        _homeDataCache = null;
         loadHomeData();
     } catch(e) {
         showToast('Erro ao registrar venda: ' + e.message, 'error');
@@ -2978,6 +3612,25 @@ async function deleteCategoryAction() {
 }
 
 function openAddProductSheet() {
+    const bizType = currentGroup?.bizType || 'varejo';
+    const isService = bizType === 'servicos';
+    const isWholesale = bizType === 'atacado';
+
+    // Title
+    const titleEl = document.getElementById('addProductSheetTitle');
+    if (titleEl) titleEl.textContent = isService ? 'Cadastrar Serviço' : 'Cadastrar Produto';
+
+    // Wholesale section
+    const wsSection = document.getElementById('wholesalePricingSection');
+    if (wsSection) wsSection.style.display = isWholesale ? 'block' : 'none';
+    // Reset tiers
+    const wsContainer = document.getElementById('wholesaleTiers');
+    if (wsContainer) wsContainer.innerHTML = `<div class="wholesale-tier-row">
+        <input type="number" placeholder="Qtd mín" class="form-input wt-qty" style="width:80px" value="10">
+        <input type="text" placeholder="Preço/un" class="form-input wt-price" oninput="maskMoney(this)">
+        <button class="btn-icon-sm" onclick="removeWholesaleTier(this)"><i class="fa-solid fa-xmark"></i></button>
+    </div>`;
+
     // Populate category select
     const sel = document.getElementById('addProductCat');
     // Reload categories into select
@@ -2993,11 +3646,13 @@ function openAddProductSheet() {
         sel.innerHTML += '<option value="__new__">+ Nova categoria</option>';
     });
     // Reset form
-    ['addProductName','addProductModel','addProductDesc'].forEach(id => document.getElementById(id).value = '');
-    ['addProductSalePrice','addProductCostPrice'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('editProductId').value = ''; // Limpa ID de edição
+    ['addProductName','addProductBrand','addProductModel','addProductDesc'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    ['addProductSalePrice','addProductCostPrice'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('editProductId').value = '';
     document.getElementById('addProductStock').value = '0';
     document.getElementById('newCatField').style.display = 'none';
+    const priceIntel = document.getElementById('priceIntelPanel');
+    if (priceIntel) priceIntel.style.display = 'none';
     
     // Permission check for Cost Price
     const costInput = document.getElementById('addProductCostPrice');
@@ -3020,6 +3675,7 @@ function checkNewCatFromSelect(sel) {
 async function saveProduct() {
     let catId = document.getElementById('addProductCat').value;
     const catNewName = document.getElementById('newCatName').value.trim();
+    const brand = document.getElementById('addProductBrand').value.trim();
     const name = document.getElementById('addProductName').value.trim();
     const model = document.getElementById('addProductModel').value.trim();
     const salePrice = parseMoney(document.getElementById('addProductSalePrice').value);
@@ -3028,6 +3684,7 @@ async function saveProduct() {
     const stockQty = parseInt(document.getElementById('addProductStock').value) || 0;
     const desc = document.getElementById('addProductDesc').value.trim();
     const editId = document.getElementById('editProductId').value;
+    const bizType = currentGroup?.bizType || 'varejo';
 
     if (!name || !catId) { showToast('Nome e categoria são obrigatórios', 'error'); return; }
     if (!salePrice) { showToast('Informe o preço de venda', 'error'); return; }
@@ -3035,6 +3692,16 @@ async function saveProduct() {
     
     // Enforce cost permission
     const finalCost = canViewCost() ? costPrice : 0;
+
+    // Wholesale tiers
+    let wholesaleTiers = [];
+    if (bizType === 'atacado') {
+        document.querySelectorAll('.wholesale-tier-row').forEach(row => {
+            const qty = parseInt(row.querySelector('.wt-qty').value) || 0;
+            const price = parseMoney(row.querySelector('.wt-price').value);
+            if (qty > 0 && price > 0) wholesaleTiers.push({ minQty: qty, price });
+        });
+    }
 
     try {
         // Criar nova categoria se necessário
@@ -3050,14 +3717,18 @@ async function saveProduct() {
             catName = catDoc.data().name;
         }
 
+        const productData = {
+            name, brand: brand || '', categoryId: catId, categoryName: catName,
+            salePrice, costPrice: finalCost, model, description: desc, unit,
+            wholesaleTiers,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
         if (editId) {
             // ATUALIZAR
-            await db.collection('groups').doc(currentGroupId).collection('products').doc(editId).update({
-                name, categoryId: catId, categoryName: catName,
-                salePrice, costPrice: finalCost, model, description: desc, unit
-            });
+            await db.collection('groups').doc(currentGroupId).collection('products').doc(editId).update(productData);
             showToast('Produto atualizado!', 'success');
-            await addToFeed('product', `Atualizou produto: ${name}`);
+            await addToFeed('product', `Atualizou ${bizType === 'servicos' ? 'serviço' : 'produto'}: ${name}`);
         } else {
             // CRIAR NOVO
             const groupDoc = await db.collection('groups').doc(currentGroupId).get();
@@ -3066,9 +3737,7 @@ async function saveProduct() {
             const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
             
             const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
-                name, categoryId: catId, categoryName: catName,
-                salePrice, costPrice: finalCost, model, description: desc, unit, code,
-                active: true,
+                ...productData, code, active: true,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 createdBy: currentUser.uid
             });
@@ -3084,6 +3753,10 @@ async function saveProduct() {
             }
             showToast('Produto salvo!', 'success');
         }
+
+        // Sincronizar banco global (marca + produto + preço)
+        syncToGlobalDB(name, brand, salePrice, finalCost);
+
         closeSheet('sheetAddProduct');
         loadProductsTab();
     } catch(e) {
@@ -3099,11 +3772,15 @@ async function openProductDetail(productId) {
         const doc = await db.collection('groups').doc(currentGroupId).collection('products').doc(productId).get();
         if (!doc.exists) return;
         const p = doc.data();
+        const bizType = currentGroup?.bizType || 'varejo';
         
         openAddProductSheet(); // Abre e reseta
-        document.getElementById('sheetAddProduct').querySelector('.sheet-title').textContent = 'Editar Produto';
+        const titleEl = document.getElementById('addProductSheetTitle');
+        if (titleEl) titleEl.textContent = bizType === 'servicos' ? 'Editar Serviço' : 'Editar Produto';
         document.getElementById('editProductId').value = productId;
         document.getElementById('addProductName').value = p.name;
+        const brandEl = document.getElementById('addProductBrand');
+        if (brandEl) brandEl.value = p.brand || '';
         document.getElementById('addProductModel').value = p.model || '';
         document.getElementById('addProductDesc').value = p.description || '';
         document.getElementById('addProductSalePrice').value = (p.salePrice || 0).toFixed(2).replace('.',',');
@@ -3119,6 +3796,19 @@ async function openProductDetail(productId) {
         document.getElementById('addProductCat').value = p.categoryId;
         // Esconder estoque inicial na edição (gerenciado na aba estoque)
         document.getElementById('addProductStock').parentElement.parentElement.style.display = 'none';
+
+        // Load wholesale tiers
+        if (bizType === 'atacado' && p.wholesaleTiers && p.wholesaleTiers.length > 0) {
+            const container = document.getElementById('wholesaleTiers');
+            if (container) {
+                container.innerHTML = p.wholesaleTiers.map(t => `
+                    <div class="wholesale-tier-row">
+                        <input type="number" placeholder="Qtd mín" class="form-input wt-qty" style="width:80px" value="${t.minQty}">
+                        <input type="text" placeholder="Preço/un" class="form-input wt-price" value="${t.price.toFixed(2).replace('.',',')}" oninput="maskMoney(this)">
+                        <button class="btn-icon-sm" onclick="removeWholesaleTier(this)"><i class="fa-solid fa-xmark"></i></button>
+                    </div>`).join('');
+            }
+        }
     } catch(e) { showToast('Erro ao carregar: ' + e.message, 'error'); }
 }
 
@@ -3260,6 +3950,23 @@ async function loadProfileTab() {
     document.getElementById('profileRoleText').textContent = rb.label;
     document.getElementById('groupInfoName').textContent = currentGroup.name;
     document.getElementById('groupInfoSeg').textContent = currentGroup.segmento || '—';
+
+    // Tipo de negócio badge
+    const bizType = currentGroup.bizType || 'varejo';
+    const bizLabels = { varejo: {label:'Varejo', cls:'badge-varejo'}, servicos: {label:'Serviços', cls:'badge-servicos'}, atacado: {label:'Atacado', cls:'badge-atacado'} };
+    const biz = bizLabels[bizType] || bizLabels.varejo;
+    const typeBadge = document.getElementById('groupTypeBadge');
+    if (typeBadge) { typeBadge.textContent = biz.label; typeBadge.className = `group-type-badge ${biz.cls}`; }
+
+    // Localização
+    const loc = currentGroup.location;
+    const locEl = document.getElementById('groupInfoLocation');
+    if (locEl) locEl.innerHTML = loc && loc.city ? `<i class="fa-solid fa-location-dot"></i> ${loc.city}${loc.state ? ', ' + loc.state : ''}` : '<i class="fa-solid fa-location-dot"></i> Localização não definida';
+
+    // Label produto
+    const prodLabel = document.getElementById('groupProductLabel');
+    if (prodLabel) prodLabel.textContent = bizType === 'servicos' ? 'Serviços' : 'Produtos';
+
     // Count members
     const memSnap = await db.collection('groups').doc(currentGroupId).collection('members').get();
     document.getElementById('groupMemberCount').textContent = memSnap.size;
@@ -3270,8 +3977,12 @@ async function loadProfileTab() {
     document.getElementById('inviteCodeBig').textContent = currentGroup.code || '------';
     // Hide manage options if not admin
     document.getElementById('groupInfoCard').querySelector('button').style.display = isAdminOrManager() ? 'block' : 'none';
+    const btnEditGroupProfile = document.getElementById('btnEditGroupProfile');
+    if (btnEditGroupProfile) btnEditGroupProfile.style.display = isAdminOrManager() ? 'block' : 'none';
     const adminDashItem = document.getElementById('adminDashboardSettingsItem');
     if (adminDashItem) adminDashItem.style.display = isAdminOrManager() ? 'flex' : 'none';
+    const editGroupItem = document.getElementById('editGroupSettingsItem');
+    if (editGroupItem) editGroupItem.style.display = isAdminOrManager() ? 'flex' : 'none';
 }
 
 /* ============================================================
@@ -3500,6 +4211,27 @@ async function regenerateCode() {
 }
 
 /* ============================================================
+   HELPER: Add logo to PDF
+============================================================ */
+async function addLogoToPDF(doc) {
+    try {
+        // Tenta carregar numera_colorido.png
+        const logoEl = document.querySelector('img[src*="numera_colorido"]') || document.querySelector('img[src*="logo_colorido"]');
+        if (logoEl && logoEl.complete) {
+            const canvas = document.createElement('canvas');
+            canvas.width = logoEl.naturalWidth || logoEl.width;
+            canvas.height = logoEl.naturalHeight || logoEl.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(logoEl, 0, 0);
+            const dataURL = canvas.toDataURL('image/png');
+            doc.addImage(dataURL, 'PNG', 14, 8, 32, 12);
+            return 45;
+        }
+    } catch(e) { console.warn('Logo:', e); }
+    return 20;
+}
+
+/* ============================================================
    PDF REPORT
 ============================================================ */
 async function generateMonthReport() {
@@ -3508,124 +4240,180 @@ async function generateMonthReport() {
     
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const monthDate = appDate; // Usa a data selecionada globalmente
+    const monthDate = appDate;
     const startOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     const endOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const bizType = currentGroup?.bizType || 'varejo';
+    const isService = bizType === 'servicos';
+    const prodLabel = isService ? 'Serviços' : 'Produtos';
+
+    const addHeader = (doc, title) => {
+        doc.setFontSize(18); doc.setTextColor(0,0,0);
+        doc.text(title, 14, 18);
+        doc.setFontSize(9); doc.setTextColor(100);
+        doc.text(`Clearview Numera · ${currentGroup.name}`, 14, 24);
+        doc.text(`Período: ${monthDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})}`, 14, 29);
+        doc.text(`Gerado: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 29, { align: 'right' });
+        doc.setDrawColor(220,220,220); doc.line(14, 32, pageWidth - 14, 32);
+    };
 
     try {
-        // 1. Buscar Vendas do Mês
+        // Logo
+        await addLogoToPDF(doc);
+        addHeader(doc, 'Relatório Mensal');
+
+        // 1. Buscar Vendas
         const salesSnap = await db.collection('groups').doc(currentGroupId).collection('sales')
-            .where('createdAt', '>=', startOfMonth)
-            .where('createdAt', '<=', endOfMonth)
+            .where('createdAt', '>=', startOfMonth).where('createdAt', '<=', endOfMonth)
             .orderBy('createdAt', 'desc').get();
-        
         const sales = salesSnap.docs.map(d => ({...d.data(), id: d.id}));
-        
-        // 2. Buscar Feed (para estoque)
+
+        // 2. Buscar produtos cadastrados no mês
+        const prodSnap = await db.collection('groups').doc(currentGroupId).collection('products')
+            .where('createdAt', '>=', startOfMonth).where('createdAt', '<=', endOfMonth).get();
+        const newProducts = prodSnap.docs.map(d => ({...d.data(), id: d.id}));
+
+        // 3. Buscar Feed (movimentações de estoque)
         const feedSnap = await db.collection('groups').doc(currentGroupId).collection('feed')
-            .where('createdAt', '>=', startOfMonth)
-            .where('createdAt', '<=', endOfMonth)
+            .where('createdAt', '>=', startOfMonth).where('createdAt', '<=', endOfMonth)
             .orderBy('createdAt', 'desc').get();
         const feed = feedSnap.docs.map(d => d.data());
 
-        // Cálculos
-        let totalSales = 0;
-        let totalCost = 0; // Estimado se tiver custo nos itens
-        const sellerStats = {};
+        // 4. Custos fixos
+        let fixedCosts = [];
+        try {
+            const settingsDoc = await db.collection('groups').doc(currentGroupId).collection('settings').doc('costs').get();
+            if (settingsDoc.exists) fixedCosts = settingsDoc.data().fixed_items || [];
+        } catch(e) {}
+        const fixedTotal = fixedCosts.reduce((a,c) => a + (c.value||0), 0);
 
+        // 5. Custos variáveis
+        const expSnap = await db.collection('groups').doc(currentGroupId).collection('expenses')
+            .where('date', '>=', startOfMonth).where('date', '<=', endOfMonth).get();
+        const varCosts = expSnap.docs.map(d => d.data());
+        const varTotal = varCosts.reduce((a,c) => a + (c.value||0), 0);
+
+        // Cálculos financeiros
+        let totalSales = 0; let totalCost = 0; const sellerStats = {};
         sales.forEach(s => {
             totalSales += s.total || 0;
-            // Agrupar por vendedor
-            if (!sellerStats[s.sellerName]) sellerStats[s.sellerName] = 0;
-            sellerStats[s.sellerName] += s.total || 0;
-            
-            // Custo (se disponível nos itens)
-            if (s.items) {
-                // Nota: O custo real precisaria estar salvo na venda. 
-                // Se não estiver, assumimos 0 ou precisaríamos buscar produtos.
-                // Para simplificar e ser rápido, vamos assumir que o lucro é calculado se tivermos dados.
+            if (!sellerStats[s.sellerName]) sellerStats[s.sellerName] = {total:0, count:0};
+            sellerStats[s.sellerName].total += s.total || 0;
+            sellerStats[s.sellerName].count++;
+            if (s.items) s.items.forEach(i => { totalCost += (i.cost || 0) * (i.qty || 1); });
+        });
+        const netProfit = totalSales - totalCost - fixedTotal - varTotal;
+
+        // --- RESUMO FINANCEIRO ---
+        doc.autoTable({
+            startY: 36,
+            head: [['Faturamento', `CMV (Custo ${prodLabel})`, 'Custos Fixos', 'Custos Var.', 'Lucro Líquido']],
+            body: [[formatBRL(totalSales), formatBRL(totalCost), formatBRL(fixedTotal), formatBRL(varTotal), formatBRL(netProfit)]],
+            theme: 'grid',
+            headStyles: { fillColor: [255, 204, 0], textColor: [0,0,0], fontStyle: 'bold' },
+            bodyStyles: { fontStyle: 'bold' },
+            didParseCell: (data) => {
+                if (data.row.index === 0 && data.column.index === 4) {
+                    data.cell.styles.textColor = netProfit >= 0 ? [30,142,62] : [217,48,37];
+                }
             }
         });
 
-        // --- PDF DESIGN ---
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const logoUrl = 'logo.png'; // Tenta pegar a logo
-        try {
-            const img = document.querySelector('.logo-img') || document.querySelector('.auth-logo-img');
-            if (img) doc.addImage(img, 'PNG', 14, 10, 10, 10);
-        } catch(e) {}
-
-        doc.setFontSize(18);
-        doc.text("Relatório Mensal", 28, 16);
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Clearview Numera • ${currentGroup.name}`, 28, 21);
-        doc.text(`Referência: ${monthDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})}`, 14, 30);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 30, { align: 'right' });
-
-        // Resumo Financeiro
-        doc.autoTable({
-            startY: 35,
-            head: [['Total Vendas', 'Vendas (Qtd)', 'Melhor Vendedor']],
-            body: [[
-                formatBRL(totalSales),
-                sales.length,
-                Object.entries(sellerStats).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-'
-            ]],
-            theme: 'grid',
-            headStyles: { fillColor: [255, 204, 0], textColor: [0,0,0] }
-        });
-
-        // Detalhe Vendas
-        doc.text("Detalhamento de Vendas", 14, doc.lastAutoTable.finalY + 10);
-        const salesRows = sales.map(s => [
-            s.createdAt.toDate().toLocaleDateString('pt-BR'),
-            s.items.map(i => `${i.qty}x ${i.productName}`).join(', '),
-            formatBRL(s.total),
-            s.sellerName.split(' ')[0]
-        ]);
-        doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 12,
-            head: [['Data', 'Itens', 'Valor', 'Vendedor']],
-            body: salesRows,
-            theme: 'striped',
-            styles: { fontSize: 8 }
-        });
-
-        // Movimentações de Estoque
-        const stockMoves = feed.filter(f => f.type === 'stock_in' || f.type === 'stock_out');
-        if (stockMoves.length > 0) {
-            doc.addPage();
-            doc.text("Movimentações de Estoque", 14, 20);
-            const stockRows = stockMoves.map(f => [
-                f.createdAt.toDate().toLocaleDateString('pt-BR') + ' ' + f.createdAt.toDate().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}),
-                f.description,
-                f.userName
-            ]);
+        // --- DETALHAMENTO DE VENDAS ---
+        if (sales.length > 0) {
+            doc.setFontSize(11); doc.setTextColor(0);
+            doc.text(`Detalhamento de ${isService ? 'Serviços' : 'Vendas'} (${sales.length})`, 14, doc.lastAutoTable.finalY + 10);
+            const salesRows = sales.map(s => {
+                const profit = (s.items || []).reduce((a,i) => a + ((i.price - (i.cost||0)) * (i.qty||1)), 0);
+                const clientInfo = s.clientName ? ` · ${s.clientName}` : (s.technician ? ` · Téc: ${s.technician}` : '');
+                return [
+                    s.createdAt.toDate().toLocaleDateString('pt-BR'),
+                    (s.items || []).map(i => `${i.qty}x ${i.productName}`).join(', ').substring(0, 60) + clientInfo,
+                    formatBRL(s.total),
+                    formatBRL(profit),
+                    (s.sellerName || '').split(' ')[0]
+                ];
+            });
             doc.autoTable({
-                startY: 25,
-                head: [['Data/Hora', 'Descrição', 'Usuário']],
-                body: stockRows,
-                theme: 'striped'
+                startY: doc.lastAutoTable.finalY + 12,
+                head: [['Data', 'Itens', 'Total', 'Lucro', 'Vendedor']],
+                body: salesRows, theme: 'striped', styles: { fontSize: 7.5 },
+                headStyles: { fillColor: [13,71,161] }
             });
         }
 
-        // Salvar/Compartilhar
+        // --- PRODUTOS/SERVIÇOS CADASTRADOS NO MÊS ---
+        if (newProducts.length > 0) {
+            doc.addPage(); await addLogoToPDF(doc); addHeader(doc, `${prodLabel} Cadastrados no Mês`);
+            const prodRows = newProducts.map(p => [
+                p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString('pt-BR') : '—',
+                p.brand || '—', p.name, p.model || '—',
+                formatBRL(p.salePrice), formatBRL(p.costPrice),
+                p.salePrice && p.costPrice ? ((p.salePrice - p.costPrice) / p.salePrice * 100).toFixed(1) + '%' : '—'
+            ]);
+            doc.autoTable({
+                startY: 36,
+                head: [['Data', 'Marca', 'Nome', 'Variante', 'Venda', 'Custo', 'Margem']],
+                body: prodRows, theme: 'striped', styles: { fontSize: 7 },
+                headStyles: { fillColor: [13,71,161] }
+            });
+        }
+
+        // --- MOVIMENTAÇÕES DE ESTOQUE ---
+        const stockMoves = feed.filter(f => f.type === 'stock_in' || f.type === 'stock_out');
+        if (stockMoves.length > 0) {
+            doc.addPage(); await addLogoToPDF(doc); addHeader(doc, 'Movimentações de Estoque');
+            const stockRows = stockMoves.map(f => [
+                f.createdAt.toDate().toLocaleDateString('pt-BR') + ' ' + f.createdAt.toDate().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}),
+                f.type === 'stock_in' ? 'Entrada' : 'Saída',
+                f.description, f.userName || '—'
+            ]);
+            doc.autoTable({
+                startY: 36,
+                head: [['Data/Hora', 'Tipo', 'Descrição', 'Usuário']],
+                body: stockRows, theme: 'striped', styles: { fontSize: 8 },
+                headStyles: { fillColor: [13,71,161] }
+            });
+        }
+
+        // --- CUSTOS FIXOS ---
+        if (fixedCosts.length > 0) {
+            doc.addPage(); await addLogoToPDF(doc); addHeader(doc, 'Custos Fixos');
+            doc.autoTable({
+                startY: 36,
+                head: [['Descrição', 'Valor Mensal']],
+                body: fixedCosts.map(c => [c.name, formatBRL(c.value)]),
+                foot: [['Total', formatBRL(fixedTotal)]],
+                theme: 'striped', styles: { fontSize: 9 },
+                headStyles: { fillColor: [13,71,161] },
+                footStyles: { fontStyle: 'bold', fillColor: [240,240,240], textColor: [0,0,0] }
+            });
+        }
+
+        // --- RANKING VENDEDORES ---
+        if (Object.keys(sellerStats).length > 0) {
+            const lastY = doc.lastAutoTable?.finalY || 50;
+            if (lastY > 200) { doc.addPage(); await addLogoToPDF(doc); addHeader(doc, 'Ranking de Vendedores'); }
+            const sellerRows = Object.entries(sellerStats).sort((a,b) => b[1].total - a[1].total)
+                .map(([name, s]) => [name.split(' ')[0], s.count, formatBRL(s.total)]);
+            doc.autoTable({
+                startY: lastY > 200 ? 36 : lastY + 12,
+                head: [['Vendedor', 'Qtd Vendas', 'Total']],
+                body: sellerRows, theme: 'striped', styles: { fontSize: 9 },
+                headStyles: { fillColor: [13,71,161] }
+            });
+        }
+
+        // --- Salvar/Compartilhar ---
         const pdfBlob = doc.output('blob');
         const fileName = `Relatorio_${currentGroup.name}_${monthDate.getMonth()+1}_${monthDate.getFullYear()}.pdf`;
-        
         if (navigator.share) {
             const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-            navigator.share({
-                files: [file],
-                title: 'Relatório Mensal',
-                text: 'Segue relatório gerado pelo Clearview Numera.'
-            }).catch(e => doc.save(fileName));
-        } else {
-            doc.save(fileName);
-        }
+            navigator.share({ files: [file], title: 'Relatório Mensal', text: 'Relatório gerado pelo Clearview Numera.' })
+                .catch(() => doc.save(fileName));
+        } else { doc.save(fileName); }
         showToast('Relatório gerado!', 'success');
-
     } catch(e) {
         console.error(e);
         showToast('Erro ao gerar PDF: ' + e.message, 'error');
@@ -3838,7 +4626,7 @@ async function saveCost() {
     const value = parseMoney(document.getElementById('costValueInput').value);
     const dateVal = document.getElementById('costDateInput').value;
 
-    if (!name || isNaN(value)) {
+    if (!name || isNaN(value) || value <= 0) {
         showToast('Preencha nome e valor válidos.', 'error');
         return;
     }
@@ -3846,7 +4634,7 @@ async function saveCost() {
     setLoading('btnSaveCost', true);
     try {
         if (type === 'fixed') {
-            // FIXED COSTS (Settings)
+            // FIXED COSTS — persistentes, ficam para sempre no settings
             if (index > -1) adminDashFixedCosts[index] = { name, value };
             else adminDashFixedCosts.push({ name, value });
             
@@ -3855,7 +4643,7 @@ async function saveCost() {
             }, { merge: true });
 
         } else {
-            // VARIABLE COSTS (Expenses Collection)
+            // VARIABLE COSTS — por mês na coleção expenses
             const dateObj = dateVal ? new Date(dateVal + 'T12:00:00') : appDate;
             const expenseData = {
                 name, value,
@@ -3863,15 +4651,14 @@ async function saveCost() {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            if (index > -1) {
-                const id = adminDashVariableCosts[index].id;
-                await db.collection('groups').doc(currentGroupId).collection('expenses').doc(id).update(expenseData);
+            if (index > -1 && adminDashVariableCosts[index]?.id) {
+                await db.collection('groups').doc(currentGroupId).collection('expenses').doc(adminDashVariableCosts[index].id).update(expenseData);
             } else {
                 await db.collection('groups').doc(currentGroupId).collection('expenses').add(expenseData);
             }
         }
 
-        loadAdminDashboard();
+        await loadAdminDashboard();
         closeSheet('sheet-cost-manager');
         showToast('Custo salvo com sucesso!', 'success');
     } catch(e) {
@@ -4031,100 +4818,86 @@ async function generateFinancialReportPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const monthDate = appDate;
-
-        // Pega os dados direto da tela para garantir consistência
-        const revenue = parseMoney(document.getElementById('finRevenue').textContent.replace('R$ ',''));
-        const productCost = parseMoney(document.getElementById('finProductCost').textContent.replace('R$ ',''));
-        const fixedTotal = parseMoney(document.getElementById('finTotalFixed').textContent.replace('R$ ',''));
-        const variableTotal = parseMoney(document.getElementById('finTotalVariable').textContent.replace('R$ ',''));
-        const netProfit = parseMoney(document.getElementById('finNetProfit').textContent.replace('R$ ',''));
-
-        // --- Design do PDF ---
         const pageWidth = doc.internal.pageSize.getWidth();
-        try { // Robust image adding
-            const img = document.querySelector('.logo-img') || document.querySelector('.auth-logo-img');
-            if (img) {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                const dataURL = canvas.toDataURL('image/png');
-                doc.addImage(dataURL, 'PNG', 14, 10, 10, 10);
-            }
-        } catch(e) {
-            console.warn("Could not add logo to PDF:", e);
-        }
 
-        doc.setFontSize(18);
-        doc.text("Relatório Financeiro", 28, 16);
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Clearview Numera • ${currentGroup.name}`, 28, 21);
-        doc.text(`Período: ${monthDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})}`, 14, 30);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 30, { align: 'right' });
+        const revenue = parseMoney(document.getElementById('finRevenue').textContent.replace('R$ ','').replace(/\./g,'').replace(',','.'));
+        const productCost = parseMoney(document.getElementById('finProductCost').textContent.replace('R$ ','').replace(/\./g,'').replace(',','.'));
+        const fixedTotal = parseMoney(document.getElementById('finTotalFixed').textContent.replace('R$ ','').replace(/\./g,'').replace(',','.'));
+        const variableTotal = parseMoney(document.getElementById('finTotalVariable').textContent.replace('R$ ','').replace(/\./g,'').replace(',','.'));
+        const netProfit = parseMoney(document.getElementById('finNetProfit').textContent.replace('R$ ','').replace(/\./g,'').replace(',','.'));
+        const grossProfit = revenue - productCost;
+        const margin = revenue > 0 ? (grossProfit / revenue * 100).toFixed(1) : 0;
+
+        // Logo
+        await addLogoToPDF(doc);
+
+        doc.setFontSize(18); doc.setTextColor(0,0,0);
+        doc.text("Relatório Financeiro", 14, 18);
+        doc.setFontSize(9); doc.setTextColor(100);
+        doc.text(`Clearview Numera · ${currentGroup.name}`, 14, 24);
+        doc.text(`Período: ${monthDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})}`, 14, 29);
+        doc.text(`Gerado: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 29, { align: 'right' });
+        doc.setDrawColor(220,220,220); doc.line(14, 32, pageWidth - 14, 32);
 
         // Resumo Financeiro
         doc.autoTable({
-            startY: 35,
-            head: [['Faturamento Bruto', 'Custo Produtos (CMV)', 'Custos Fixos', 'Custos Variáveis', 'Lucro Líquido']],
+            startY: 36,
+            head: [['Faturamento', 'CMV', 'Lucro Bruto', 'Margem', 'Custos Fixos', 'Custos Var.', 'Lucro Líquido']],
             body: [[
-                formatBRL(revenue),
-                formatBRL(productCost),
-                formatBRL(fixedTotal),
-                formatBRL(variableTotal),
-                formatBRL(netProfit)
+                formatBRL(revenue), formatBRL(productCost), formatBRL(grossProfit),
+                margin + '%', formatBRL(fixedTotal), formatBRL(variableTotal), formatBRL(netProfit)
             ]],
             theme: 'grid',
-            headStyles: { fillColor: [13, 71, 161] }, // Azul
-            bodyStyles: { fontStyle: 'bold' },
-            didParseCell: function (data) {
-                if (data.column.index === 4) { // Coluna Lucro Líquido
-                    data.cell.styles.textColor = netProfit >= 0 ? [30, 142, 62] : [217, 48, 37]; // Verde ou vermelho
+            headStyles: { fillColor: [13, 71, 161] },
+            bodyStyles: { fontStyle: 'bold', fontSize: 8 },
+            didParseCell: (data) => {
+                if (data.row.index === 0 && data.column.index === 6) {
+                    data.cell.styles.textColor = netProfit >= 0 ? [30,142,62] : [217,48,37];
                 }
             }
         });
 
-        // Detalhe Custos Fixos
+        // Detalhes Custos Fixos
         if (adminDashFixedCosts.length > 0) {
-            doc.text("Detalhamento de Custos Fixos", 14, doc.lastAutoTable.finalY + 10);
-            const costRows = adminDashFixedCosts.map(c => [c.name, formatBRL(c.value)]);
+            doc.setFontSize(10); doc.setTextColor(0);
+            doc.text("Custos Fixos (mensais recorrentes)", 14, doc.lastAutoTable.finalY + 10);
             doc.autoTable({
                 startY: doc.lastAutoTable.finalY + 12,
-                head: [['Descrição do Custo', 'Valor']],
-                body: costRows,
-                theme: 'striped',
-                styles: { fontSize: 9 }
+                head: [['Descrição', 'Valor/mês']],
+                body: adminDashFixedCosts.map(c => [c.name, formatBRL(c.value)]),
+                foot: [['Total Fixo', formatBRL(fixedTotal)]],
+                theme: 'striped', styles: { fontSize: 9 },
+                headStyles: { fillColor: [13,71,161] },
+                footStyles: { fontStyle: 'bold', fillColor: [240,240,240], textColor: [0,0,0] }
             });
         }
 
-        // Detalhe Custos Variáveis
+        // Detalhes Custos Variáveis
         if (adminDashVariableCosts.length > 0) {
-            doc.text("Detalhamento de Custos Variáveis", 14, doc.lastAutoTable.finalY + 10);
-            const costRows = adminDashVariableCosts.map(c => [c.name, formatBRL(c.value)]);
+            doc.setFontSize(10); doc.setTextColor(0);
+            doc.text("Custos Variáveis do Mês", 14, doc.lastAutoTable.finalY + 10);
             doc.autoTable({
                 startY: doc.lastAutoTable.finalY + 12,
-                head: [['Descrição do Custo', 'Valor']],
-                body: costRows,
-                theme: 'striped',
-                styles: { fontSize: 9 }
+                head: [['Data', 'Descrição', 'Valor']],
+                body: adminDashVariableCosts.map(c => [
+                    c.date ? c.date.toDate().toLocaleDateString('pt-BR') : '—',
+                    c.name, formatBRL(c.value)
+                ]),
+                foot: [['', 'Total Variável', formatBRL(variableTotal)]],
+                theme: 'striped', styles: { fontSize: 9 },
+                headStyles: { fillColor: [13,71,161] },
+                footStyles: { fontStyle: 'bold', fillColor: [240,240,240], textColor: [0,0,0] }
             });
         }
 
         // Salvar/Compartilhar
         const pdfBlob = doc.output('blob');
         const fileName = `Financeiro_${currentGroup.name}_${monthDate.getMonth()+1}_${monthDate.getFullYear()}.pdf`;
-        
         if (navigator.share) {
             const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-            navigator.share({
-                files: [file],
-                title: 'Relatório Financeiro',
-                text: `Segue relatório financeiro de ${monthDate.toLocaleDateString('pt-BR', {month:'long'})} gerado pelo Clearview Numera.`
-            }).catch(e => doc.save(fileName));
-        } else {
-            doc.save(fileName);
-        }
+            navigator.share({ files: [file], title: 'Relatório Financeiro', text: 'Relatório financeiro do Clearview Numera.' })
+                .catch(() => doc.save(fileName));
+        } else { doc.save(fileName); }
         showToast('Relatório gerado!', 'success');
     } catch (e) {
         console.error("PDF Generation Error:", e);
@@ -4942,11 +5715,1150 @@ function installAppAction() {
 }
 
 /* ============================================================
+   🌍 BIZ MODE — Adapta o app para varejo/serviços/atacado
+============================================================ */
+function applyBizMode() {
+    if (!currentGroup) return;
+    const bizType = currentGroup.bizType || 'varejo';
+    const isService = bizType === 'servicos';
+    const isWholesale = bizType === 'atacado';
+
+    // Bottom nav labels
+    const bnProducts = document.getElementById('bn-products');
+    const bnStock = document.getElementById('bn-stock');
+    if (bnProducts) {
+        bnProducts.innerHTML = isService
+            ? '<i class="fa-solid fa-screwdriver-wrench"></i> Serviços'
+            : '<i class="fa-solid fa-box"></i> Produtos';
+    }
+    if (bnStock) {
+        bnStock.innerHTML = isService
+            ? '<i class="fa-solid fa-toolbox"></i> Equipamentos'
+            : '<i class="fa-solid fa-warehouse"></i> Estoque';
+    }
+
+    // Sidenav links
+    document.querySelectorAll('.sidenav-inner a').forEach(a => {
+        const txt = a.textContent.trim();
+        if (txt.startsWith('Produto') || txt.startsWith('Serviço')) {
+            a.innerHTML = `<i class="fa-solid fa-${isService ? 'screwdriver-wrench' : 'box'}"></i> ${isService ? 'Serviços' : 'Produtos'}`;
+        }
+        if (txt.startsWith('Estoque') || txt.startsWith('Equipamento')) {
+            a.innerHTML = `<i class="fa-solid fa-${isService ? 'toolbox' : 'warehouse'}"></i> ${isService ? 'Equipamentos' : 'Estoque'}`;
+        }
+    });
+
+    // Tab Produtos: mostrar view correta
+    const productsView = document.getElementById('productsView');
+    const servicosView = document.getElementById('servicosView');
+    if (productsView) productsView.style.display = isService ? 'none' : 'block';
+    if (servicosView) servicosView.style.display = isService ? 'block' : 'none';
+
+    // Tab Estoque: mostrar view correta
+    const stockView = document.getElementById('stockView');
+    const equipamentosView = document.getElementById('equipamentosView');
+    if (stockView) stockView.style.display = isService ? 'none' : 'block';
+    if (equipamentosView) equipamentosView.style.display = isService ? 'block' : 'none';
+
+    // Register sheet: mostrar opções corretas
+    const regDefault = document.getElementById('registerOptionsDefault');
+    const regServicos = document.getElementById('registerOptionsServicos');
+    if (regDefault) regDefault.style.display = isService ? 'none' : 'grid';
+    if (regServicos) regServicos.style.display = isService ? 'grid' : 'none';
+
+    // Sale sheet: campos atacado/serviço
+    const clientFields = document.getElementById('saleClientFields');
+    const serviceFields = document.getElementById('saleServiceFields');
+    if (clientFields) clientFields.style.display = isWholesale ? 'block' : 'none';
+    if (serviceFields) serviceFields.style.display = isService ? 'block' : 'none';
+}
+
+/* ============================================================
+   📍 LOCALIZAÇÃO — Leaflet + Geocodificação
+============================================================ */
+let locationMap = null;
+let locationMarker = null;
+let locationCircle = null;
+let editLocationMap = null;
+let editLocationMarker = null;
+let editLocationCircle = null;
+let selectedLat = 0, selectedLng = 0, selectedRadius = 30;
+let editSelectedLat = 0, editSelectedLng = 0, editSelectedRadius = 30;
+
+function selectBizType(type) {
+    document.querySelectorAll('.biz-type-card').forEach(c => c.classList.remove('active'));
+    const card = document.getElementById('bizType' + type.charAt(0).toUpperCase() + type.slice(1));
+    if (card) card.classList.add('active');
+    document.getElementById('groupBizType').value = type;
+}
+
+function selectEditBizType(type) {
+    document.querySelectorAll('#sheetEditGroup .biz-type-card').forEach(c => c.classList.remove('active'));
+    const card = document.getElementById('editBizType' + type.charAt(0).toUpperCase() + type.slice(1));
+    if (card) card.classList.add('active');
+    document.getElementById('editGroupBizType').value = type;
+    const wsSection = document.getElementById('editWholesaleSection');
+    if (wsSection) wsSection.style.display = type === 'atacado' ? 'block' : 'none';
+}
+
+// Mapa de estados brasileiros (nome completo → sigla)
+const BR_STATES_MAP = {
+    'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA',
+    'Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO',
+    'Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG',
+    'Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI',
+    'Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS',
+    'Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP',
+    'Sergipe':'SE','Tocantins':'TO'
+};
+function getBRStateCode(addr) {
+    // Tenta state_code primeiro (ex: "BR-PR"), depois pelo nome completo
+    const sc = addr['ISO3166-2-lvl4'] || addr.state_code || '';
+    if (sc && sc.length === 2) return sc.toUpperCase();
+    if (sc && sc.includes('-')) return sc.split('-').pop().toUpperCase();
+    const stateName = addr.state || '';
+    return BR_STATES_MAP[stateName] || stateName.substring(0,2).toUpperCase();
+}
+
+async function detectLocation() {
+    if (!navigator.geolocation) { showToast('Geolocalização não disponível', 'error'); return; }
+    showToast('Detectando localização...', 'info');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        selectedLat = pos.coords.latitude;
+        selectedLng = pos.coords.longitude;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${selectedLat}&lon=${selectedLng}&format=json&accept-language=pt-BR`);
+            const data = await res.json();
+            const city = data.address.city || data.address.town || data.address.municipality || data.address.county || '';
+            const stateCode = getBRStateCode(data.address);
+            document.getElementById('groupCity').value = city;
+            document.getElementById('groupState').value = stateCode;
+        } catch(e) { console.warn('Geocode:', e); }
+        showLocationMap(selectedLat, selectedLng, selectedRadius);
+    }, () => showToast('Não foi possível obter localização', 'error'));
+}
+
+async function detectLocationEdit() {
+    if (!navigator.geolocation) { showToast('Geolocalização não disponível', 'error'); return; }
+    showToast('Detectando localização...', 'info');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        editSelectedLat = pos.coords.latitude;
+        editSelectedLng = pos.coords.longitude;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${editSelectedLat}&lon=${editSelectedLng}&format=json&accept-language=pt-BR`);
+            const data = await res.json();
+            const city = data.address.city || data.address.town || data.address.municipality || data.address.county || '';
+            const stateCode = getBRStateCode(data.address);
+            document.getElementById('editGroupCity').value = city;
+            document.getElementById('editGroupState').value = stateCode;
+        } catch(e) { console.warn('Geocode:', e); }
+        showEditLocationMap(editSelectedLat, editSelectedLng, editSelectedRadius);
+    }, () => showToast('Não foi possível obter localização', 'error'));
+}
+
+function showLocationMap(lat, lng, radius) {
+    document.getElementById('locationMapContainer').style.display = 'block';
+    if (!locationMap) {
+        locationMap = L.map('locationMap').setView([lat, lng], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(locationMap);
+        locationMap.on('click', function(e) {
+            selectedLat = e.latlng.lat;
+            selectedLng = e.latlng.lng;
+            updateLocationMapMarker(locationMap, selectedLat, selectedLng, selectedRadius, 'location');
+        });
+    } else {
+        locationMap.setView([lat, lng], 11);
+    }
+    updateLocationMapMarker(locationMap, lat, lng, radius, 'location');
+    setTimeout(() => locationMap.invalidateSize(), 100);
+}
+
+function showEditLocationMap(lat, lng, radius) {
+    document.getElementById('editLocationMapContainer').style.display = 'block';
+    if (!editLocationMap) {
+        editLocationMap = L.map('editLocationMap').setView([lat, lng], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(editLocationMap);
+        editLocationMap.on('click', function(e) {
+            editSelectedLat = e.latlng.lat;
+            editSelectedLng = e.latlng.lng;
+            updateLocationMapMarker(editLocationMap, editSelectedLat, editSelectedLng, editSelectedRadius, 'edit');
+        });
+    } else {
+        editLocationMap.setView([lat, lng], 11);
+    }
+    updateLocationMapMarker(editLocationMap, lat, lng, radius, 'edit');
+    setTimeout(() => editLocationMap.invalidateSize(), 100);
+}
+
+function updateLocationMapMarker(map, lat, lng, radiusKm, prefix) {
+    const radiusM = radiusKm * 1000;
+    if (prefix === 'location') {
+        if (locationMarker) map.removeLayer(locationMarker);
+        if (locationCircle) map.removeLayer(locationCircle);
+        locationMarker = L.marker([lat, lng]).addTo(map).bindPopup('Sua loja').openPopup();
+        locationCircle = L.circle([lat, lng], { radius: radiusM, color: '#ffcc00', fillOpacity: 0.15 }).addTo(map);
+    } else {
+        if (editLocationMarker) map.removeLayer(editLocationMarker);
+        if (editLocationCircle) map.removeLayer(editLocationCircle);
+        editLocationMarker = L.marker([lat, lng]).addTo(map).bindPopup('Sua loja').openPopup();
+        editLocationCircle = L.circle([lat, lng], { radius: radiusM, color: '#ffcc00', fillOpacity: 0.15 }).addTo(map);
+    }
+}
+
+function updateRadius(val) {
+    selectedRadius = parseInt(val);
+    document.getElementById('radiusLabel').textContent = val + ' km';
+    const el = document.getElementById('locationRadius');
+    if (el) { el.dataset.lat = selectedLat; el.dataset.lng = selectedLng; }
+    if (locationMap && locationMarker) updateLocationMapMarker(locationMap, selectedLat, selectedLng, selectedRadius, 'location');
+}
+
+function updateEditRadius(val) {
+    editSelectedRadius = parseInt(val);
+    document.getElementById('editRadiusLabel').textContent = val + ' km';
+    if (editLocationMap && editLocationMarker) updateLocationMapMarker(editLocationMap, editSelectedLat, editSelectedLng, editSelectedRadius, 'edit');
+}
+
+/* ============================================================
+   ✏️ EDITAR GRUPO
+============================================================ */
+function openEditGroupSheet() {
+    if (!currentGroup) return;
+    document.getElementById('editGroupName').value = currentGroup.name || '';
+    document.getElementById('editGroupSegmento').value = currentGroup.segmento || '';
+    const btype = currentGroup.bizType || 'varejo';
+    selectEditBizType(btype);
+    const loc = currentGroup.location || {};
+    document.getElementById('editGroupCity').value = loc.city || '';
+    document.getElementById('editGroupState').value = loc.state || '';
+    editSelectedLat = loc.lat || 0;
+    editSelectedLng = loc.lng || 0;
+    editSelectedRadius = loc.radius || 30;
+    document.getElementById('editLocationRadius').value = editSelectedRadius;
+    document.getElementById('editRadiusLabel').textContent = editSelectedRadius + ' km';
+    const minOrder = currentGroup.minOrder || 0;
+    const minOrderEl = document.getElementById('editMinOrder');
+    if (minOrderEl) minOrderEl.value = minOrder > 0 ? minOrder.toFixed(2).replace('.',',') : '';
+    if (editSelectedLat && editSelectedLng) {
+        setTimeout(() => showEditLocationMap(editSelectedLat, editSelectedLng, editSelectedRadius), 300);
+    }
+    openSheet('sheetEditGroup');
+}
+
+async function saveEditGroup() {
+    const name = document.getElementById('editGroupName').value.trim();
+    const seg = document.getElementById('editGroupSegmento').value.trim();
+    const bizType = document.getElementById('editGroupBizType').value;
+    const city = document.getElementById('editGroupCity').value.trim();
+    const state = document.getElementById('editGroupState').value.trim().toUpperCase();
+    const minOrder = parseMoney(document.getElementById('editMinOrder')?.value || '0');
+    if (!name) { showToast('Nome é obrigatório', 'error'); return; }
+    setLoading('btnSaveEditGroup', true);
+    try {
+        const updates = {
+            name, segmento: seg, bizType, minOrder,
+            location: { city, state, country: 'brasil', lat: editSelectedLat, lng: editSelectedLng, radius: editSelectedRadius }
+        };
+        await db.collection('groups').doc(currentGroupId).update(updates);
+        Object.assign(currentGroup, updates);
+        applyBizMode();
+        document.getElementById('navGroupName').textContent = name;
+        document.getElementById('sideNavGroupName').textContent = name;
+        showToast('Grupo atualizado!', 'success');
+        closeSheet('sheetEditGroup');
+        loadProfileTab();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnSaveEditGroup', false, '<i class="fa-solid fa-floppy-disk"></i> Salvar Alterações'); }
+}
+
+/* ============================================================
+   🔍 AUTOCOMPLETE — Marcas e Produtos
+============================================================ */
+let brandSearchTimeout = null;
+let productNameSearchTimeout = null;
+let priceIntelTimeout = null;
+
+function closeSuggestions(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+}
+
+function onBrandInput(val) {
+    clearTimeout(brandSearchTimeout);
+    if (val.length < 2) { closeSuggestions('brandSuggestions'); return; }
+    brandSearchTimeout = setTimeout(() => searchGlobalBrands(val), 350);
+}
+
+function onProductNameInput(val) {
+    clearTimeout(productNameSearchTimeout);
+    if (val.length < 2) { closeSuggestions('productNameSuggestions'); return; }
+    productNameSearchTimeout = setTimeout(() => searchGlobalProducts(val), 350);
+    clearTimeout(priceIntelTimeout);
+    priceIntelTimeout = setTimeout(() => loadPriceIntelligence(val), 800);
+}
+
+function onSalePriceChange() {
+    const name = document.getElementById('addProductName')?.value.trim();
+    if (name && name.length >= 2) {
+        clearTimeout(priceIntelTimeout);
+        priceIntelTimeout = setTimeout(() => loadPriceIntelligence(name), 600);
+    }
+}
+
+function getLocationPath() {
+    if (!currentGroup?.location) return null;
+    const loc = currentGroup.location;
+    const country = (loc.country || 'brasil').toLowerCase().replace(/\s+/g, '_');
+    const state = (loc.state || 'desconhecido').toLowerCase();
+    const city = (loc.city || 'desconhecida').toLowerCase().replace(/\s+/g, '_');
+    return { country, state, city };
+}
+
+async function searchGlobalBrands(query) {
+    const container = document.getElementById('brandSuggestions');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    try {
+        // Buscar no banco global hierárquico
+        const loc = getLocationPath();
+        const results = new Set();
+        
+        // Busca por cidade
+        if (loc) {
+            const citySnap = await db.collection('globalData').doc(loc.country).collection(loc.state).doc(loc.city).collection('brands')
+                .where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff').limit(5).get();
+            citySnap.docs.forEach(d => results.add(d.data().name));
+            
+            // Busca nacional se pouco resultado
+            if (results.size < 3) {
+                const nationalSnap = await db.collection('globalData').doc('brasil').collection('_national').doc('brands_index')
+                    .get();
+                if (nationalSnap.exists) {
+                    const brands = nationalSnap.data().brands || [];
+                    brands.filter(b => b.toLowerCase().startsWith(q)).slice(0, 5).forEach(b => results.add(b));
+                }
+            }
+        }
+        
+        const arr = Array.from(results).slice(0, 6);
+        if (arr.length === 0) { container.style.display = 'none'; return; }
+        
+        container.innerHTML = arr.map(b => `<div class="autocomplete-item" onclick="selectBrand('${b.replace(/'/g,"\\'")}')">${b}</div>`).join('');
+        container.style.display = 'block';
+    } catch(e) { container.style.display = 'none'; }
+}
+
+function selectBrand(brand) {
+    const el = document.getElementById('addProductBrand');
+    if (el) el.value = brand;
+    closeSuggestions('brandSuggestions');
+    // Atualizar busca de produtos com a marca
+    const prodName = document.getElementById('addProductName')?.value.trim();
+    if (prodName) loadPriceIntelligence(prodName);
+}
+
+async function searchGlobalProducts(query) {
+    const container = document.getElementById('productNameSuggestions');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    try {
+        const loc = getLocationPath();
+        const results = new Set();
+        if (loc) {
+            const citySnap = await db.collection('globalData').doc(loc.country).collection(loc.state).doc(loc.city).collection('products')
+                .where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff').limit(8).get();
+            citySnap.docs.forEach(d => results.add(d.data().name));
+        }
+        
+        const arr = Array.from(results).slice(0, 6);
+        if (arr.length === 0) { container.style.display = 'none'; return; }
+        
+        container.innerHTML = arr.map(p => `<div class="autocomplete-item" onclick="selectProductName('${p.replace(/'/g,"\\'")}')">${p}</div>`).join('');
+        container.style.display = 'block';
+    } catch(e) { container.style.display = 'none'; }
+}
+
+function selectProductName(name) {
+    const el = document.getElementById('addProductName');
+    if (el) el.value = name;
+    closeSuggestions('productNameSuggestions');
+    loadPriceIntelligence(name);
+}
+
+/* ============================================================
+   💰 INTELIGÊNCIA DE PREÇOS
+============================================================ */
+async function loadPriceIntelligence(productName) {
+    const panel = document.getElementById('priceIntelPanel');
+    const body = document.getElementById('priceIntelBody');
+    const loading = document.getElementById('priceIntelLoading');
+    if (!panel || !body) return;
+    
+    const q = productName.toLowerCase().trim();
+    if (q.length < 2) { panel.style.display = 'none'; return; }
+    
+    panel.style.display = 'block';
+    if (loading) loading.style.display = 'inline';
+    body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 0">Buscando preços na região...</div>';
+    
+    try {
+        const loc = getLocationPath();
+        if (!loc) { body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Configure a localização do grupo para ver preços da região.</div>'; if(loading)loading.style.display='none'; return; }
+        
+        const levels = [
+            { label: '📍 Sua cidade', path: `globalData/${loc.country}/${loc.state}/${loc.city}/products` },
+            { label: '🏙️ Estado', path: `globalData/${loc.country}/${loc.state}/_state/products` },
+            { label: '🇧🇷 Brasil', path: `globalData/brasil/_national/products` }
+        ];
+        
+        let html = '';
+        for (const level of levels) {
+            try {
+                const snap = await db.collection(level.path.split('/')[0])
+                    .doc(level.path.split('/')[1]);
+                // Usar a subcoleção diretamente
+                const parts = level.path.split('/');
+                let ref = db;
+                parts.forEach((p, i) => { ref = i % 2 === 0 ? ref.collection(p) : ref.doc(p); });
+                const qSnap = await ref.where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff').limit(50).get();
+                
+                if (qSnap.empty) continue;
+                
+                const prices = [], costs = [], margins = [];
+                qSnap.docs.forEach(d => {
+                    const data = d.data();
+                    if (data.avgSalePrice) prices.push(data.avgSalePrice);
+                    if (data.avgCostPrice) costs.push(data.avgCostPrice);
+                    if (data.avgMargin) margins.push(data.avgMargin);
+                });
+                
+                if (prices.length === 0) continue;
+                
+                const min = Math.min(...prices), max = Math.max(...prices);
+                const avg = prices.reduce((a,b) => a+b, 0) / prices.length;
+                const avgCost = costs.length ? costs.reduce((a,b)=>a+b,0)/costs.length : 0;
+                const avgMargin = margins.length ? margins.reduce((a,b)=>a+b,0)/margins.length : (avg && avgCost ? (avg-avgCost)/avg*100 : 0);
+                
+                html += `<div class="price-intel-row">
+                    <div class="price-intel-level">${level.label}</div>
+                    <div class="price-intel-stats">
+                        <span class="pi-stat min">Mín <strong>${formatBRL(min)}</strong></span>
+                        <span class="pi-stat avg">Méd <strong>${formatBRL(avg)}</strong></span>
+                        <span class="pi-stat max">Máx <strong>${formatBRL(max)}</strong></span>
+                        ${avgMargin ? `<span class="pi-stat margin">Margem <strong>${avgMargin.toFixed(1)}%</strong></span>` : ''}
+                    </div>
+                </div>`;
+            } catch(e) { /* nível sem dados */ }
+        }
+        
+        body.innerHTML = html || '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Nenhum dado de preço disponível para este produto ainda. Você será o primeiro! 🚀</div>';
+    } catch(e) {
+        body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Erro ao buscar dados.</div>';
+    } finally {
+        if (loading) loading.style.display = 'none';
+    }
+}
+
+/* ============================================================
+   🌐 SINCRONIZAR BANCO GLOBAL
+============================================================ */
+async function syncToGlobalDB(productName, brand, salePrice, costPrice) {
+    if (!currentGroup?.location?.city) return;
+    const loc = getLocationPath();
+    if (!loc) return;
+    
+    const nameLower = productName.toLowerCase().trim();
+    const nameLowerBrand = (brand || '').toLowerCase().trim();
+    const margin = salePrice && costPrice ? (salePrice - costPrice) / salePrice * 100 : 0;
+    
+    try {
+        const batch = db.batch();
+        
+        // Sincronizar marca no nível da cidade
+        if (brand && nameLowerBrand.length > 1) {
+            const brandRef = db.collection('globalData').doc(loc.country)
+                .collection(loc.state).doc(loc.city).collection('brands').doc(nameLowerBrand);
+            batch.set(brandRef, { name: brand, nameLower: nameLowerBrand, count: firebase.firestore.FieldValue.increment(1), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            
+            // Índice nacional de marcas
+            // (simplificado — usa arrayUnion)
+        }
+        
+        // Sincronizar produto e preço na cidade
+        const cityProdRef = db.collection('globalData').doc(loc.country)
+            .collection(loc.state).doc(loc.city).collection('products').doc(nameLower);
+        
+        // Atualiza média de forma ponderada simples
+        const existingDoc = await cityProdRef.get();
+        let newData;
+        if (existingDoc.exists) {
+            const ex = existingDoc.data();
+            const count = (ex.count || 1) + 1;
+            newData = {
+                name: productName, nameLower,
+                brand: brand || ex.brand || '',
+                avgSalePrice: ((ex.avgSalePrice || salePrice) * (count-1) + salePrice) / count,
+                avgCostPrice: costPrice ? ((ex.avgCostPrice || costPrice) * (count-1) + costPrice) / count : ex.avgCostPrice,
+                avgMargin: ((ex.avgMargin || margin) * (count-1) + margin) / count,
+                minPrice: Math.min(ex.minPrice || salePrice, salePrice),
+                maxPrice: Math.max(ex.maxPrice || salePrice, salePrice),
+                count, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+        } else {
+            newData = {
+                name: productName, nameLower, brand: brand || '',
+                avgSalePrice: salePrice, avgCostPrice: costPrice || 0, avgMargin: margin,
+                minPrice: salePrice, maxPrice: salePrice,
+                count: 1, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+        }
+        batch.set(cityProdRef, newData, { merge: true });
+        
+        // Também sincronizar no nível do estado
+        const stateProdRef = db.collection('globalData').doc(loc.country)
+            .collection(loc.state).doc('_state').collection('products').doc(nameLower);
+        batch.set(stateProdRef, {
+            name: productName, nameLower, brand: brand || '',
+            avgSalePrice: salePrice, avgCostPrice: costPrice || 0, avgMargin: margin,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        // Nacional
+        const nationalRef = db.collection('globalData').doc('brasil')
+            .collection('_national').doc('products').collection('items').doc(nameLower);
+        batch.set(nationalRef, {
+            name: productName, nameLower, brand: brand || '',
+            avgSalePrice: salePrice, count: firebase.firestore.FieldValue.increment(1),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        await batch.commit();
+    } catch(e) { console.warn('syncToGlobalDB:', e.message); }
+}
+
+/* ============================================================
+   🏭 ATACADO — Funções específicas
+============================================================ */
+function addWholesaleTier() {
+    const container = document.getElementById('wholesaleTiers');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'wholesale-tier-row';
+    div.innerHTML = `<input type="number" placeholder="Qtd mín" class="form-input wt-qty" style="width:80px">
+        <input type="text" placeholder="Preço/un" class="form-input wt-price" oninput="maskMoney(this)">
+        <button class="btn-icon-sm" onclick="removeWholesaleTier(this)"><i class="fa-solid fa-xmark"></i></button>`;
+    container.appendChild(div);
+}
+
+function removeWholesaleTier(btn) {
+    const row = btn.closest('.wholesale-tier-row');
+    if (row) row.remove();
+}
+
+function maskCnpj(el) {
+    let v = el.value.replace(/\D/g, '').substring(0, 14);
+    v = v.replace(/(\d{2})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d)/, '$1/$2');
+    v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    el.value = v;
+}
+
+/* ============================================================
+   🔧 SERVIÇOS — Catálogo + OS
+============================================================ */
+let activeServiceCat = null;
+
+async function loadServicosTab() {
+    if (!currentGroupId) return;
+    const fabBtn = document.getElementById('fabAddProduct');
+    if (fabBtn) fabBtn.style.display = 'flex';
+    await loadCategoryScroll('serviceCatScroll', (catId, catName) => {
+        activeServiceCat = { id: catId, name: catName };
+        loadServicesList(catId);
+    });
+}
+
+async function loadServicesList(catId) {
+    const list = document.getElementById('servicesList');
+    if (!list) return;
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('products')
+            .where('categoryId', '==', catId).where('active', '==', true).get();
+
+        if (snap.empty) {
+            list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-screwdriver-wrench"></i><h3>Nenhum serviço</h3><p>Toque no + para cadastrar seu primeiro serviço desta categoria</p></div>`;
+            return;
+        }
+        const docs = snap.docs.sort((a,b) => (a.data().name||'').localeCompare(b.data().name||''));
+        list.innerHTML = '<div class="services-list">' + docs.map(d => {
+            const s = d.data();
+            const hourRate = s.hourRate || s.salePrice || 0;
+            const departure = s.departure || 0;
+            const calc1h = hourRate + departure;
+            return `<div class="service-item" onclick="openServiceDetail('${d.id}')">
+                <div class="service-item-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                <div class="service-item-info">
+                    <div class="service-item-name">${s.name}</div>
+                    <div class="service-item-rates">
+                        ${hourRate > 0 ? `<span class="rate-tag"><i class="fa-regular fa-clock"></i> ${formatBRL(hourRate)}/h</span>` : ''}
+                        ${departure > 0 ? `<span class="rate-tag"><i class="fa-solid fa-location-dot"></i> Saída: ${formatBRL(departure)}</span>` : ''}
+                    </div>
+                    ${s.description ? `<div class="service-item-desc">${s.description}</div>` : ''}
+                </div>
+                <div class="service-item-price">
+                    <div style="font-size:0.65rem;color:var(--text-muted)">1h de trabalho</div>
+                    <div style="font-size:0.9rem;font-weight:700;color:var(--accent)">${formatBRL(calc1h)}</div>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    } catch(e) {
+        list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Erro</h3><p>${e.message}</p></div>`;
+    }
+}
+
+function openAddServiceSheet() {
+    document.getElementById('addServiceSheetTitle').textContent = 'Cadastrar Serviço';
+    document.getElementById('editServiceId').value = '';
+    ['addServiceName','addServiceDesc'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    ['addServiceHourRate','addServiceDeparture','addServiceAdditional'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('newServiceCatField').style.display = 'none';
+    document.getElementById('serviceCalcPreview').style.display = 'none';
+    // Populate categories
+    db.collection('groups').doc(currentGroupId).collection('categories').orderBy('name').get().then(snap => {
+        const sel = document.getElementById('addServiceCat');
+        sel.innerHTML = '<option value="">Selecionar categoria...</option>';
+        snap.docs.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id; opt.textContent = d.data().name;
+            if (activeServiceCat && d.id === activeServiceCat.id) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        sel.innerHTML += '<option value="__new__">+ Nova categoria</option>';
+    });
+    openSheet('sheetAddService');
+}
+
+async function openServiceDetail(serviceId) {
+    try {
+        const doc = await db.collection('groups').doc(currentGroupId).collection('products').doc(serviceId).get();
+        if (!doc.exists) return;
+        const s = doc.data();
+        openAddServiceSheet();
+        document.getElementById('addServiceSheetTitle').textContent = 'Editar Serviço';
+        document.getElementById('editServiceId').value = serviceId;
+        document.getElementById('addServiceName').value = s.name || '';
+        document.getElementById('addServiceHourRate').value = s.hourRate ? s.hourRate.toFixed(2).replace('.',',') : '';
+        document.getElementById('addServiceDeparture').value = s.departure ? s.departure.toFixed(2).replace('.',',') : '';
+        document.getElementById('addServiceAdditional').value = s.additional ? s.additional.toFixed(2).replace('.',',') : '';
+        document.getElementById('addServiceDesc').value = s.description || '';
+        document.getElementById('addServiceCat').value = s.categoryId || '';
+        calcServicePreview();
+    } catch(e) { showToast('Erro ao carregar serviço', 'error'); }
+}
+
+function checkNewServiceCat(sel) {
+    document.getElementById('newServiceCatField').style.display = sel.value === '__new__' ? 'block' : 'none';
+}
+
+function calcServicePreview() {
+    const hourRate = parseMoney(document.getElementById('addServiceHourRate').value);
+    const departure = parseMoney(document.getElementById('addServiceDeparture').value);
+    const additional = parseMoney(document.getElementById('addServiceAdditional').value);
+    const panel = document.getElementById('serviceCalcPreview');
+    if (!hourRate && !departure && !additional) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    const total = (hourRate * 1) + departure + additional;
+    const parts = [];
+    if (hourRate) parts.push(`1h × ${formatBRL(hourRate)}`);
+    if (departure) parts.push(`Saída ${formatBRL(departure)}`);
+    if (additional) parts.push(`Adicional ${formatBRL(additional)}`);
+    document.getElementById('scpFormula').textContent = parts.join(' + ');
+    document.getElementById('scpTotal').textContent = formatBRL(total);
+}
+
+async function saveService() {
+    let catId = document.getElementById('addServiceCat').value;
+    const catNewName = document.getElementById('newServiceCatName').value.trim();
+    const name = document.getElementById('addServiceName').value.trim();
+    const hourRate = parseMoney(document.getElementById('addServiceHourRate').value);
+    const departure = parseMoney(document.getElementById('addServiceDeparture').value);
+    const additional = parseMoney(document.getElementById('addServiceAdditional').value);
+    const desc = document.getElementById('addServiceDesc').value.trim();
+    const editId = document.getElementById('editServiceId').value;
+
+    if (!name || !catId) { showToast('Nome e categoria são obrigatórios', 'error'); return; }
+    setLoading('btnSaveService', true);
+
+    try {
+        let catName = '';
+        if (catId === '__new__') {
+            if (!catNewName) { showToast('Digite o nome da categoria', 'error'); setLoading('btnSaveService', false); return; }
+            const newCat = await db.collection('groups').doc(currentGroupId).collection('categories').add({
+                name: catNewName, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            catId = newCat.id; catName = catNewName;
+        } else {
+            const catDoc = await db.collection('groups').doc(currentGroupId).collection('categories').doc(catId).get();
+            catName = catDoc.data().name;
+        }
+
+        const serviceData = {
+            name, categoryId: catId, categoryName: catName,
+            hourRate, departure, additional, description: desc,
+            salePrice: hourRate, // compatibilidade com sistema de vendas
+            costPrice: 0, unit: 'h',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (editId) {
+            await db.collection('groups').doc(currentGroupId).collection('products').doc(editId).update(serviceData);
+            showToast('Serviço atualizado!', 'success');
+        } else {
+            const groupDoc = await db.collection('groups').doc(currentGroupId).get();
+            const counter = (groupDoc.data().productCounter || 0) + 1;
+            await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
+            const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
+            await db.collection('groups').doc(currentGroupId).collection('products').add({
+                ...serviceData, code, active: true, brand: '',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.uid
+            });
+            showToast('Serviço cadastrado!', 'success');
+        }
+        closeSheet('sheetAddService');
+        loadServicosTab();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnSaveService', false, '<i class="fa-solid fa-floppy-disk"></i> Salvar Serviço'); }
+}
+
+/* ============================================================
+   📋 OS — ORDEM DE SERVIÇO
+============================================================ */
+let currentOSService = null;
+
+function openNewOSSheet() {
+    closeSheet('sheetRegister');
+    currentOSService = null;
+    // Carregar categorias no grid
+    const grid = document.getElementById('osCatGrid');
+    grid.innerHTML = '<div class="loading-state" style="grid-column:span 2"><div class="loading-spinner"></div></div>';
+    db.collection('groups').doc(currentGroupId).collection('categories').get().then(snap => {
+        grid.innerHTML = snap.docs.map(d => `
+            <button class="sale-cat-btn" onclick="selectOSCat('${d.id}','${d.data().name.replace(/'/g,"\\'")}')">
+                <i class="fa-solid fa-screwdriver-wrench"></i> ${d.data().name}
+            </button>
+        `).join('') || '<div style="grid-column:span 2;text-align:center;color:var(--text-muted);font-size:0.8rem;padding:20px">Nenhuma categoria de serviço encontrada</div>';
+    });
+    goOSStep(1);
+    openSheet('sheetNewOS');
+}
+
+async function selectOSCat(catId, catName) {
+    document.getElementById('osStep2CatName').textContent = catName;
+    goOSStep(2);
+    const list = document.getElementById('osServiceList');
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('products')
+            .where('categoryId', '==', catId).where('active', '==', true).get();
+        if (snap.empty) {
+            list.innerHTML = '<div class="feed-empty" style="padding:24px">Nenhum serviço nesta categoria</div>';
+            return;
+        }
+        const docs = snap.docs.sort((a,b) => (a.data().name||'').localeCompare(b.data().name||''));
+        list.innerHTML = docs.map(d => {
+            const s = d.data();
+            const hourRate = s.hourRate || s.salePrice || 0;
+            const departure = s.departure || 0;
+            return `<div class="sale-product-row" onclick="selectOSService('${d.id}')">
+                <div class="sale-product-info">
+                    <div class="sale-product-name">${s.name}</div>
+                    <div style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap">
+                        ${hourRate > 0 ? `<span class="rate-tag"><i class="fa-regular fa-clock"></i> ${formatBRL(hourRate)}/h</span>` : ''}
+                        ${departure > 0 ? `<span class="rate-tag"><i class="fa-solid fa-location-dot"></i> ${formatBRL(departure)}</span>` : ''}
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:0.8rem;align-self:center"></i>
+            </div>`;
+        }).join('');
+    } catch(e) { list.innerHTML = `<div style="color:var(--danger);padding:16px">${e.message}</div>`; }
+}
+
+async function selectOSService(serviceId) {
+    try {
+        const doc = await db.collection('groups').doc(currentGroupId).collection('products').doc(serviceId).get();
+        if (!doc.exists) return;
+        currentOSService = { id: serviceId, ...doc.data() };
+        // Preencher step 3
+        document.getElementById('osSelectedServiceId').value = serviceId;
+        document.getElementById('osSelectedServiceName').textContent = currentOSService.name;
+        document.getElementById('osSelectedServiceCat').textContent = currentOSService.categoryName || '—';
+        // Pré-preencher campos (sugestões)
+        const hourRate = currentOSService.hourRate || currentOSService.salePrice || 0;
+        const departure = currentOSService.departure || 0;
+        const additional = currentOSService.additional || 0;
+        const osHoursEl = document.getElementById('osHours');
+        const osDepartureEl = document.getElementById('osDeparture');
+        const osAdditionalEl = document.getElementById('osAdditional');
+        osHoursEl.value = '1';
+        osHoursEl.placeholder = '1 (padrão)';
+        osDepartureEl.value = departure > 0 ? departure.toFixed(2).replace('.',',') : '';
+        osDepartureEl.placeholder = departure > 0 ? departure.toFixed(2).replace('.',',') : '0,00';
+        osAdditionalEl.value = additional > 0 ? additional.toFixed(2).replace('.',',') : '';
+        // Limpar outros campos
+        ['osTechnician','osClient','osDescription'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+        calcOSTotal();
+        goOSStep(3);
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+function calcOSTotal() {
+    if (!currentOSService) return;
+    const hourRate = currentOSService.hourRate || currentOSService.salePrice || 0;
+    const hours = parseFloat(document.getElementById('osHours').value) || 1;
+    const departure = parseMoney(document.getElementById('osDeparture').value) || 0;
+    const additional = parseMoney(document.getElementById('osAdditional').value) || 0;
+    const total = (hourRate * hours) + departure + additional;
+    document.getElementById('osTotalValue').textContent = formatBRL(total);
+    const parts = [];
+    if (hourRate && hours) parts.push(`${hours}h × ${formatBRL(hourRate)} = ${formatBRL(hourRate * hours)}`);
+    if (departure) parts.push(`Saída: ${formatBRL(departure)}`);
+    if (additional) parts.push(`Adicional: ${formatBRL(additional)}`);
+    document.getElementById('osTotalBreakdown').textContent = parts.join(' · ');
+}
+
+function goOSStep(step) {
+    document.querySelectorAll('#sheetNewOS .sale-step').forEach(s => s.classList.remove('active'));
+    if (step === 'manual') document.getElementById('osStepManual').classList.add('active');
+    else document.getElementById('osStep' + step).classList.add('active');
+}
+
+function openOSManualStep() {
+    ['osManualName','osManualClient','osManualTechnician','osManualDesc'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('osManualTotal').value = '';
+    goOSStep('manual');
+}
+
+async function confirmOS() {
+    if (!currentOSService) return;
+    setLoading('btnConfirmOS', true);
+    try {
+        const hourRate = currentOSService.hourRate || currentOSService.salePrice || 0;
+        const hours = parseFloat(document.getElementById('osHours').value) || 1;
+        const departure = parseMoney(document.getElementById('osDeparture').value) || 0;
+        const additional = parseMoney(document.getElementById('osAdditional').value) || 0;
+        const total = (hourRate * hours) + departure + additional;
+        const technician = document.getElementById('osTechnician').value.trim();
+        const client = document.getElementById('osClient').value.trim();
+        const description = document.getElementById('osDescription').value.trim();
+
+        const osData = {
+            bizType: 'servicos',
+            items: [{
+                productId: currentOSService.id,
+                productName: currentOSService.name,
+                qty: hours, price: hourRate, cost: 0, unit: 'h'
+            }],
+            total, hours, departure, additional, technician, clientName: client,
+            note: description, description,
+            serviceId: currentOSService.id, serviceName: currentOSService.name,
+            hourRate, categoryName: currentOSService.categoryName || '',
+            sellerId: currentUser.uid,
+            sellerName: currentUserData.name + ' ' + currentUserData.surname,
+            sellerNickname: currentUserData.nickname,
+            groupId: currentGroupId,
+            createdAt: firebase.firestore.Timestamp.fromDate(appDate)
+        };
+        await db.collection('groups').doc(currentGroupId).collection('sales').add(osData);
+        await addToFeed('sale', `OS: ${currentOSService.name}${client ? ' · ' + client : ''}${technician ? ' · Téc: ' + technician : ''}`, { amount: total });
+        showToast('OS registrada!', 'success');
+        closeSheet('sheetNewOS');
+        currentOSService = null;
+        _homeDataCache = null;
+        loadHomeData();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnConfirmOS', false, '<i class="fa-solid fa-check"></i> Confirmar OS'); }
+}
+
+async function confirmOSManual() {
+    const name = document.getElementById('osManualName').value.trim();
+    const total = parseMoney(document.getElementById('osManualTotal').value);
+    if (!name || !total) { showToast('Nome e valor são obrigatórios', 'error'); return; }
+    setLoading('btnConfirmOSManual', true);
+    try {
+        const technician = document.getElementById('osManualTechnician').value.trim();
+        const client = document.getElementById('osManualClient').value.trim();
+        const desc = document.getElementById('osManualDesc').value.trim();
+        const osData = {
+            bizType: 'servicos',
+            items: [{ productId: 'manual', productName: name, qty: 1, price: total, cost: 0, unit: 'h' }],
+            total, hours: 1, departure: 0, additional: 0,
+            technician, clientName: client, note: desc, description: desc,
+            serviceName: name, hourRate: total,
+            sellerId: currentUser.uid,
+            sellerName: currentUserData.name + ' ' + currentUserData.surname,
+            sellerNickname: currentUserData.nickname,
+            groupId: currentGroupId,
+            createdAt: firebase.firestore.Timestamp.fromDate(appDate)
+        };
+        await db.collection('groups').doc(currentGroupId).collection('sales').add(osData);
+        await addToFeed('sale', `OS: ${name}${client ? ' · ' + client : ''}`, { amount: total });
+        showToast('OS registrada!', 'success');
+        closeSheet('sheetNewOS');
+        _homeDataCache = null;
+        loadHomeData();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnConfirmOSManual', false, '<i class="fa-solid fa-check"></i> Registrar OS'); }
+}
+
+/* ============================================================
+   🛠️ EQUIPAMENTOS
+============================================================ */
+function switchEquipTab(tab) {
+    document.getElementById('equipTabItens').classList.toggle('active', tab === 'itens');
+    document.getElementById('equipTabCombustivel').classList.toggle('active', tab === 'combustivel');
+    document.getElementById('equipItensSection').style.display = tab === 'itens' ? 'block' : 'none';
+    document.getElementById('equipCombustivelSection').style.display = tab === 'combustivel' ? 'block' : 'none';
+    if (tab === 'combustivel') loadFuelHistory();
+}
+
+async function loadEquipamentosTab() {
+    if (!currentGroupId) return;
+    // Default: abrir na aba itens
+    switchEquipTab('itens');
+    loadEquipItemsList();
+}
+
+async function loadEquipItemsList() {
+    const list = document.getElementById('equipItemsList');
+    if (!list) return;
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('equipment')
+            .orderBy('name').get();
+        if (snap.empty) {
+            list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-toolbox"></i><h3>Nenhum item ainda</h3><p>Adicione materiais, ferramentas ou insumos</p></div>`;
+            return;
+        }
+        list.innerHTML = snap.docs.map(d => {
+            const e = d.data();
+            return `<div class="equip-item">
+                <div class="equip-item-icon"><i class="fa-solid fa-toolbox"></i></div>
+                <div class="equip-item-info">
+                    <div class="equip-item-name">${e.name}</div>
+                    ${e.category ? `<div class="equip-item-cat">${e.category}</div>` : ''}
+                    ${e.notes ? `<div class="equip-item-notes">${e.notes}</div>` : ''}
+                </div>
+                <div class="equip-item-qty">
+                    <div class="equip-qty-num">${e.qty || 0}</div>
+                    <div class="equip-qty-unit">${e.unit || 'un'}</div>
+                </div>
+                <button class="equip-edit-btn" onclick="openEditEquipment('${d.id}')"><i class="fa-solid fa-pen"></i></button>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Erro</h3><p>${e.message}</p></div>`;
+    }
+}
+
+function openAddEquipmentSheet() {
+    document.getElementById('addEquipTitle').textContent = 'Adicionar Item';
+    document.getElementById('editEquipId').value = '';
+    ['equipName','equipCategory','equipNotes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('equipQty').value = '1';
+    document.getElementById('equipUnit').value = 'un';
+    openSheet('sheetAddEquipment');
+}
+
+async function openEditEquipment(id) {
+    try {
+        const doc = await db.collection('groups').doc(currentGroupId).collection('equipment').doc(id).get();
+        if (!doc.exists) return;
+        const e = doc.data();
+        document.getElementById('addEquipTitle').textContent = 'Editar Item';
+        document.getElementById('editEquipId').value = id;
+        document.getElementById('equipName').value = e.name || '';
+        document.getElementById('equipQty').value = e.qty || 1;
+        document.getElementById('equipUnit').value = e.unit || 'un';
+        document.getElementById('equipCategory').value = e.category || '';
+        document.getElementById('equipNotes').value = e.notes || '';
+        openSheet('sheetAddEquipment');
+    } catch(e) { showToast('Erro ao carregar item', 'error'); }
+}
+
+async function saveEquipment() {
+    const name = document.getElementById('equipName').value.trim();
+    const qty = parseFloat(document.getElementById('equipQty').value) || 0;
+    const unit = document.getElementById('equipUnit').value;
+    const category = document.getElementById('equipCategory').value.trim();
+    const notes = document.getElementById('equipNotes').value.trim();
+    const editId = document.getElementById('editEquipId').value;
+    if (!name) { showToast('Nome é obrigatório', 'error'); return; }
+    setLoading('btnSaveEquipment', true);
+    try {
+        const data = { name, qty, unit, category, notes, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        if (editId) {
+            await db.collection('groups').doc(currentGroupId).collection('equipment').doc(editId).update(data);
+            showToast('Item atualizado!', 'success');
+        } else {
+            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('groups').doc(currentGroupId).collection('equipment').add(data);
+            showToast('Item adicionado!', 'success');
+        }
+        closeSheet('sheetAddEquipment');
+        loadEquipItemsList();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnSaveEquipment', false, '<i class="fa-solid fa-floppy-disk"></i> Salvar'); }
+}
+
+/* ============================================================
+   ⛽ COMBUSTÍVEL
+============================================================ */
+let lastFuelKm = 0;
+
+function openAddFuelSheet() {
+    closeSheet('sheetRegister');
+    // Pré-preencher data de hoje
+    document.getElementById('fuelDate').value = new Date().toISOString().split('T')[0];
+    ['fuelVehicle','fuelNotes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    ['fuelKmAtual','fuelLitros'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('fuelValor').value = '';
+    document.getElementById('fuelKmRodados').value = '';
+    document.getElementById('fuelPriceTag').style.display = 'none';
+    openSheet('sheetAddFuel');
+}
+
+function calcKmRodados() {
+    const kmAtual = parseFloat(document.getElementById('fuelKmAtual').value) || 0;
+    if (kmAtual > lastFuelKm && lastFuelKm > 0) {
+        document.getElementById('fuelKmRodados').value = kmAtual - lastFuelKm;
+    }
+}
+
+function calcFuelPrice() {
+    const litros = parseFloat(document.getElementById('fuelLitros').value) || 0;
+    const valor = parseMoney(document.getElementById('fuelValor').value) || 0;
+    const tag = document.getElementById('fuelPriceTag');
+    if (litros > 0 && valor > 0) {
+        const ppl = valor / litros;
+        document.getElementById('fuelPricePerLiter').textContent = formatBRL(ppl);
+        tag.style.display = 'flex';
+    } else {
+        tag.style.display = 'none';
+    }
+}
+
+async function saveFuel() {
+    const vehicle = document.getElementById('fuelVehicle').value.trim();
+    const date = document.getElementById('fuelDate').value;
+    const fuelType = document.getElementById('fuelType').value;
+    const kmAtual = parseFloat(document.getElementById('fuelKmAtual').value) || 0;
+    const kmRodados = parseFloat(document.getElementById('fuelKmRodados').value) || 0;
+    const litros = parseFloat(document.getElementById('fuelLitros').value) || 0;
+    const valor = parseMoney(document.getElementById('fuelValor').value) || 0;
+    const notes = document.getElementById('fuelNotes').value.trim();
+
+    if (!vehicle) { showToast('Informe o veículo', 'error'); return; }
+    if (!valor) { showToast('Informe o valor', 'error'); return; }
+    setLoading('btnSaveFuel', true);
+    try {
+        const dateObj = date ? new Date(date + 'T12:00:00') : appDate;
+        const pricePerLiter = litros > 0 ? valor / litros : 0;
+        await db.collection('groups').doc(currentGroupId).collection('fuel').add({
+            vehicle, fuelType, kmAtual, kmRodados, litros, valor, pricePerLiter, notes,
+            date: firebase.firestore.Timestamp.fromDate(dateObj),
+            createdBy: currentUser.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Abastecimento registrado!', 'success');
+        closeSheet('sheetAddFuel');
+        loadFuelHistory();
+        loadFuelStats();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    finally { setLoading('btnSaveFuel', false, '<i class="fa-solid fa-floppy-disk"></i> Registrar'); }
+}
+
+async function loadFuelHistory() {
+    const list = document.getElementById('fuelHistoryList');
+    if (!list) return;
+    list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+        const snap = await db.collection('groups').doc(currentGroupId).collection('fuel')
+            .orderBy('date', 'desc').limit(30).get();
+        if (snap.empty) {
+            list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-gas-pump"></i><h3>Nenhum abastecimento</h3><p>Registre seus abastecimentos para ver a média</p></div>`;
+            loadFuelStats(); return;
+        }
+        // Atualizar lastFuelKm para próximo registro
+        const first = snap.docs[0].data();
+        lastFuelKm = first.kmAtual || 0;
+        
+        list.innerHTML = snap.docs.map(d => {
+            const f = d.data();
+            const dateStr = f.date ? f.date.toDate().toLocaleDateString('pt-BR') : '—';
+            const kml = f.litros > 0 && f.kmRodados > 0 ? (f.kmRodados / f.litros).toFixed(1) : null;
+            return `<div class="fuel-item">
+                <div class="fuel-item-icon"><i class="fa-solid fa-gas-pump"></i></div>
+                <div class="fuel-item-info">
+                    <div class="fuel-item-vehicle">${f.vehicle}</div>
+                    <div class="fuel-item-date">${dateStr} · ${f.fuelType || 'combustível'}</div>
+                    ${f.kmAtual ? `<div class="fuel-item-km"><i class="fa-solid fa-road"></i> ${f.kmAtual.toLocaleString('pt-BR')} km${f.kmRodados ? ` · ${f.kmRodados} km rodados` : ''}</div>` : ''}
+                    ${kml ? `<div class="fuel-item-efficiency"><i class="fa-solid fa-gauge-high"></i> ${kml} km/L</div>` : ''}
+                </div>
+                <div class="fuel-item-values">
+                    <div class="fuel-item-valor">${formatBRL(f.valor)}</div>
+                    ${f.litros ? `<div class="fuel-item-litros">${f.litros}L</div>` : ''}
+                    ${f.pricePerLiter ? `<div class="fuel-item-ppl">${formatBRL(f.pricePerLiter)}/L</div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+        loadFuelStats(snap.docs.map(d => d.data()));
+    } catch(e) {
+        list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Erro</h3><p>${e.message}</p></div>`;
+    }
+}
+
+async function loadFuelStats(fuelData) {
+    const container = document.getElementById('fuelStatsCards');
+    if (!container) return;
+    try {
+        const data = fuelData || (() => { loadFuelHistory(); return []; })();
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        // Calcular stats
+        const withKml = data.filter(f => f.litros > 0 && f.kmRodados > 0);
+        const avgKml = withKml.length > 0 ? (withKml.reduce((a,f) => a + f.kmRodados/f.litros, 0) / withKml.length).toFixed(1) : null;
+        const lastPrice = data[0].pricePerLiter || null;
+        const totalSpent = data.reduce((a,f) => a + (f.valor||0), 0);
+        // Dias desde último abastecimento
+        let daysSince = null;
+        if (data[0].date) {
+            const lastDate = data[0].date.toDate ? data[0].date.toDate() : new Date(data[0].date);
+            daysSince = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24));
+        }
+        container.innerHTML = `
+            <div class="fuel-stats-grid">
+                ${avgKml ? `<div class="fuel-stat-card"><div class="fsc-icon"><i class="fa-solid fa-gauge-high"></i></div><div class="fsc-value">${avgKml} km/L</div><div class="fsc-label">Média de consumo</div></div>` : ''}
+                ${lastPrice ? `<div class="fuel-stat-card"><div class="fsc-icon"><i class="fa-solid fa-tag"></i></div><div class="fsc-value">${formatBRL(lastPrice)}/L</div><div class="fsc-label">Último preço</div></div>` : ''}
+                ${daysSince !== null ? `<div class="fuel-stat-card"><div class="fsc-icon"><i class="fa-regular fa-calendar"></i></div><div class="fsc-value">${daysSince}d</div><div class="fsc-label">Dias desde abast.</div></div>` : ''}
+                <div class="fuel-stat-card"><div class="fsc-icon"><i class="fa-solid fa-brazilian-real-sign"></i></div><div class="fsc-value">${formatBRL(totalSpent)}</div><div class="fsc-label">Total gasto</div></div>
+            </div>`;
+    } catch(e) { console.warn('fuelStats:', e); }
+}
+
+/* ============================================================
    BOOT SEQUENCE
 ============================================================ */
 function startApp() {
     document.getElementById('group-screen').style.display = 'none';
     document.getElementById('auth-screen').style.display = 'none';
+    applyBizMode(); // Aplicar modo de negócio (varejo/serviços/atacado)
     // Atualizar navbar
     setHomeChart('week'); // Renderiza gráfico inicial (vazio ou com dados cacheados)
     if (currentGroup) {
