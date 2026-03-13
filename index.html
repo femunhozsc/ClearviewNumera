@@ -1678,10 +1678,15 @@
         </div>
 
         <!-- Painel de Inteligência de Preços da Região -->
-        <div id="priceIntelPanel" class="price-intel-panel" style="display:none">
-            <div class="price-intel-header">
-                Cidade/Região
+        <div id="priceIntelPanel" class="section-card" style="display:none; margin: 4px 0 12px;">
+            <div class="section-card-title" style="margin-bottom: 12px;">
+                <span><i class="fa-solid fa-chart-simple"></i> Inteligência de Mercado</span>
                 <span id="priceIntelLoading" class="price-intel-loading" style="display:none"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+            </div>
+            <div class="chart-toggle" style="margin-bottom: 12px; display:flex;">
+                <button class="chart-toggle-btn active" id="intelTabCity" onclick="switchIntelLevel('city')" style="flex:1">Sua Região</button>
+                <button class="chart-toggle-btn" id="intelTabState" onclick="switchIntelLevel('state')" style="flex:1">Estado</button>
+                <button class="chart-toggle-btn" id="intelTabNational" onclick="switchIntelLevel('national')" style="flex:1">Brasil</button>
             </div>
             <div id="priceIntelBody">
                 <!-- Preenchido via JS -->
@@ -6815,6 +6820,20 @@ function selectProductName(name) {
    Lê de globalData/{country}/products/{variantKey}
    Filtra entries por cidade/estado/nacional para exibir stats
 ============================================================ */
+let currentIntelData = null;
+let currentIntelSimilar = [];
+let currentIntelLevel = 'city';
+let currentIntelLoc = null;
+
+function switchIntelLevel(level) {
+    currentIntelLevel = level;
+    ['city','state','national'].forEach(l => {
+        const btn = document.getElementById('intelTab' + l.charAt(0).toUpperCase() + l.slice(1));
+        if (btn) btn.classList.toggle('active', l === level);
+    });
+    renderPriceIntelligence();
+}
+
 async function loadPriceIntelligence(productName) {
     const panel = document.getElementById('priceIntelPanel');
     const body  = document.getElementById('priceIntelBody');
@@ -6830,9 +6849,10 @@ async function loadPriceIntelligence(productName) {
 
     panel.style.display = 'block';
     if (loading) loading.style.display = 'inline';
-    body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 0">Buscando preços na região...</div>';
+    body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 0;text-align:center;">Buscando preços...</div>';
 
     const loc = getLocationPath();
+    currentIntelLoc = loc;
     if (!loc) {
         body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Configure a localização do grupo para ver preços da região.</div>';
         if (loading) loading.style.display = 'none';
@@ -6845,82 +6865,108 @@ async function loadPriceIntelligence(productName) {
         const docRef  = colRef.doc(docId);
         const doc     = await docRef.get();
 
-        let html = '';
+        currentIntelData = null;
+        currentIntelSimilar = [];
 
         if (doc.exists) {
-            const data = doc.data();
-            // Tentar stats pré-calculadas primeiro (mais rápido)
-            const cityStats  = data._city?.[loc.city];
-            const stateStats = data._state?.[loc.state];
-            const natStats   = data._national;
-
-            const renderRow = (label, stats) => {
-                if (!stats || stats.n === 0) return '';
-                const lojas = stats.n === 1 ? '1 loja' : `${stats.n} lojas`;
-                return `<div class="price-intel-row">
-                    <div class="price-intel-level">${label} · <span style="color:var(--text-main);font-weight:600">${data.name}</span> <span style="color:var(--text-muted)">(${lojas})</span></div>
-                    <div class="price-intel-stats">
-                        <span class="pi-stat min">Mín <strong>${formatBRL(stats.min)}</strong></span>
-                        <span class="pi-stat avg">Méd <strong>${formatBRL(stats.avg)}</strong></span>
-                        <span class="pi-stat max">Máx <strong>${formatBRL(stats.max)}</strong></span>
-                        ${stats.m ? `<span class="pi-stat margin">Margem <strong>${stats.m.toFixed(1)}%</strong></span>` : ''}
-                    </div>
-                </div>`;
-            };
-
-            html += renderRow('Sua cidade', cityStats);
-            html += renderRow('Estado',     stateStats);
-            html += renderRow('Brasil',     natStats);
-
-            if (html) {
-                body.innerHTML = html;
-                if (loading) loading.style.display = 'none';
-                return;
+            currentIntelData = doc.data();
+        } else {
+            const prefixSnap = await colRef
+                .where('nameLower', '>=', q)
+                .where('nameLower', '<=', q + '\uf8ff')
+                .limit(15).get();
+            
+            if (!prefixSnap.empty) {
+                const seen = new Set();
+                prefixSnap.docs
+                    .map(d => d.data())
+                    .sort((a, b) => (b._entryCount || 0) - (a._entryCount || 0))
+                    .forEach(item => {
+                        if (seen.has(item.nameLower)) return;
+                        seen.add(item.nameLower);
+                        currentIntelSimilar.push(item);
+                    });
             }
         }
 
-        // Produto exato não encontrado — buscar variantes pelo prefixo do nome base
-        // Ex: "iphone 15" → acha "iphone 15 128gb", "iphone 15 256gb", "iphone 15 pro"
-        const prefixSnap = await colRef
-            .where('nameLower', '>=', q)
-            .where('nameLower', '<=', q + '\uf8ff')
-            .limit(15).get();
+        // Garante que a aba padrão ativa seja "Sua Região"
+        currentIntelLevel = 'city';
+        ['city','state','national'].forEach(l => {
+            const btn = document.getElementById('intelTab' + l.charAt(0).toUpperCase() + l.slice(1));
+            if (btn) btn.classList.toggle('active', l === currentIntelLevel);
+        });
 
-        if (!prefixSnap.empty) {
-            html += `<div class="price-intel-similar-notice">
-                <i class="fa-solid fa-circle-info"></i>
-                Este produto exato não foi encontrado na região. Veja variações disponíveis:
-            </div>`;
+        renderPriceIntelligence();
 
-            const seen = new Set();
-            prefixSnap.docs
-                .map(d => d.data())
-                .sort((a, b) => (b._entryCount || 0) - (a._entryCount || 0))
-                .forEach(item => {
-                    if (seen.has(item.nameLower)) return;
-                    seen.add(item.nameLower);
-                    // Prioriza stats da cidade, depois estado, depois nacional
-                    const stats = item._city?.[loc.city] || item._state?.[loc.state] || item._national;
-                    if (!stats || stats.n === 0) return;
-                    const lojas = stats.n === 1 ? '1 loja' : `${stats.n} lojas`;
-                    html += `<div class="price-intel-row price-intel-similar">
-                        <div class="price-intel-level"><span style="color:var(--text-main);font-weight:600">${item.name}</span> <span style="color:var(--text-muted)">(${lojas})</span></div>
-                        <div class="price-intel-stats">
-                            <span class="pi-stat min">Mín <strong>${formatBRL(stats.min)}</strong></span>
-                            <span class="pi-stat avg">Méd <strong>${formatBRL(stats.avg)}</strong></span>
-                            <span class="pi-stat max">Máx <strong>${formatBRL(stats.max)}</strong></span>
-                            ${stats.m ? `<span class="pi-stat margin">Margem <strong>${stats.m.toFixed(1)}%</strong></span>` : ''}
-                        </div>
-                    </div>`;
-                });
-        }
-
-        body.innerHTML = html || '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Nenhum dado ainda. Você será o primeiro! 🚀</div>';
     } catch(e) {
         body.innerHTML = `<div style="font-size:0.72rem;color:var(--danger,#f44336);padding:4px 0"><i class="fa-solid fa-triangle-exclamation"></i> Erro: ${e.message}</div>`;
     } finally {
         if (loading) loading.style.display = 'none';
     }
+}
+
+function renderPriceIntelligence() {
+    const body = document.getElementById('priceIntelBody');
+    if (!body) return;
+
+    if (!currentIntelLoc) return;
+
+    let html = '';
+    const levelLabels = { city: 'Sua Região', state: 'seu Estado', national: 'todo o Brasil' };
+    
+    const getStatsForLevel = (data) => {
+        if (!data) return null;
+        if (currentIntelLevel === 'city') return data._city?.[currentIntelLoc.city];
+        if (currentIntelLevel === 'state') return data._state?.[currentIntelLoc.state];
+        if (currentIntelLevel === 'national') return data._national;
+        return null;
+    };
+
+    const renderRow = (itemName, stats) => {
+        if (!stats || stats.n === 0) return '';
+        const lojas = stats.n === 1 ? '1 registro' : `${stats.n} registros`;
+        return `<div class="price-intel-row">
+            <div class="price-intel-level"><span style="color:var(--text-main);font-weight:600">${itemName}</span> <span style="color:var(--text-muted)">(${lojas})</span></div>
+            <div class="price-intel-stats">
+                <span class="pi-stat min">Mínimo <strong>${formatBRL(stats.min)}</strong></span>
+                <span class="pi-stat avg">Média <strong>${formatBRL(stats.avg)}</strong></span>
+                <span class="pi-stat max">Máximo <strong>${formatBRL(stats.max)}</strong></span>
+                ${stats.m ? `<span class="pi-stat margin">Margem Média <strong>${stats.m.toFixed(1)}%</strong></span>` : ''}
+            </div>
+        </div>`;
+    };
+
+    if (currentIntelData) {
+        const stats = getStatsForLevel(currentIntelData);
+        if (stats && stats.n > 0) {
+            html += renderRow(currentIntelData.name, stats);
+        } else {
+            html += `<div style="font-size:0.75rem;color:var(--text-muted);padding:10px 0;text-align:center;">Nenhum registro encontrado em <strong>${levelLabels[currentIntelLevel]}</strong> para este produto exato.</div>`;
+        }
+    } else if (currentIntelSimilar.length > 0) {
+        let foundAny = false;
+        let similarHtml = '';
+        
+        currentIntelSimilar.forEach(item => {
+            const stats = getStatsForLevel(item);
+            if (stats && stats.n > 0) {
+                foundAny = true;
+                similarHtml += renderRow(item.name, stats);
+            }
+        });
+
+        if (foundAny) {
+            html += `<div class="price-intel-similar-notice">
+                <i class="fa-solid fa-circle-info"></i>
+                Produto exato não encontrado. Veja variações em ${levelLabels[currentIntelLevel]}:
+            </div>`;
+            html += similarHtml;
+        } else {
+            html += `<div style="font-size:0.75rem;color:var(--text-muted);padding:10px 0;text-align:center;">Nenhum registro encontrado em <strong>${levelLabels[currentIntelLevel]}</strong> para este produto ou similares.</div>`;
+        }
+    }
+
+    body.innerHTML = html || '<div style="font-size:0.75rem;color:var(--text-muted);padding:10px 0;text-align:center;">Nenhum dado cadastrado ainda.<br>Você será o primeiro! 🚀</div>';
 }
 
 /* ============================================================
