@@ -367,7 +367,7 @@
                 </div>
 
                 <!-- Stats Modulares -->
-                <div class="stats-grid">
+                <div class="stats-grid stats-grid-2col" style="margin-bottom:10px">
                     <div class="stat-box highlight-blue" onclick="openMySalesDashboard()" style="cursor:pointer">
                         <div class="stat-box-label"><i class="fa-solid fa-user"></i> Minhas Hoje</div>
                         <div class="stat-box-value" id="myDaySales">R$ 0,00</div>
@@ -376,15 +376,24 @@
                         <div class="stat-box-label"><i class="fa-solid fa-calendar-check"></i> Meu Ano</div>
                         <div class="stat-box-value" id="myYearSales">R$ 0,00</div>
                     </div>
-                    <div class="stat-box">
-                        <div class="stat-box-label"><i class="fa-solid fa-building"></i> Grupo Hoje</div>
-                        <div class="stat-box-value" id="groupDaySales">R$ 0,00</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-box-label"><i class="fa-solid fa-chart-pie"></i> Grupo Mês</div>
-                        <div class="stat-box-value" id="groupMonthSales">R$ 0,00</div>
+                </div>
+                
+                <div id="groupStatsWrapper" class="group-stats-wrapper">
+                    <div class="stats-grid stats-grid-2col" style="margin-bottom:10px">
+                        <div class="stat-box">
+                            <div class="stat-box-label"><i class="fa-solid fa-building"></i> Grupo Hoje</div>
+                            <div class="stat-box-value" id="groupDaySales">R$ 0,00</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-box-label"><i class="fa-solid fa-chart-pie"></i> Grupo Mês</div>
+                            <div class="stat-box-value" id="groupMonthSales">R$ 0,00</div>
+                        </div>
                     </div>
                 </div>
+
+                <button id="btnToggleGroupStats" onclick="toggleGroupStats()" style="width:100%; background:var(--card-bg); border:1px solid var(--accent-border); color:var(--accent); padding:8px; border-radius:12px; margin-bottom:24px; cursor:pointer; font-size:0.75rem; font-weight:500; display:flex; align-items:center; justify-content:center; transition:all 0.2s; animation: pulse-blue 2s infinite;">
+                    Ver Desempenho do Grupo <i class="fa-solid fa-chevron-down" style="margin-left:6px"></i>
+                </button>
 
                 <!-- Atualizações -->
                 <div class="section-card updates-section" id="updatesSection" onclick="openUpdatesPage()">
@@ -969,7 +978,7 @@
                 <h3>Estoque</h3>
                 <p>Entrada ou saída de produto</p>
             </div>
-            <div class="register-option product" onclick="closeSheet('sheetRegister');switchTab('products')">
+            <div class="register-option product" onclick="closeSheet('sheetRegister');switchTab('products');openAddProductSheet()">
                 <i class="fa-solid fa-tag"></i>
                 <h3>Produto</h3>
                 <p>Cadastrar novo produto</p>
@@ -992,7 +1001,7 @@
                 <h3>Aviso</h3>
                 <p>Comunicado para a equipe</p>
             </div>
-            <div class="register-option product" onclick="closeSheet('sheetRegister');switchTab('products')">
+            <div class="register-option product" onclick="closeSheet('sheetRegister');switchTab('products');openAddServiceSheet()">
                 <i class="fa-solid fa-screwdriver-wrench"></i>
                 <h3>Serviço</h3>
                 <p>Cadastrar novo serviço</p>
@@ -1609,6 +1618,10 @@
             <button class="sheet-close" onclick="closeSheet('sheetAddProduct')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <input type="hidden" id="editProductId" value="">
+        <!-- Guarda nome/modelo originais para limpar banco global se o usuário mudar durante edição -->
+        <input type="hidden" id="editProductOriginalName" value="">
+        <input type="hidden" id="editProductOriginalModel" value="">
+        <input type="hidden" id="editProductOriginalBrand" value="">
         <div class="form-field">
             <label class="form-label">Categoria</label>
             <select id="addProductCat" class="form-select" onchange="checkNewCatFromSelect(this)">
@@ -1637,9 +1650,21 @@
             <div id="productNameSuggestions" class="autocomplete-dropdown" style="display:none"></div>
         </div>
 
-        <div class="form-field">
-            <label class="form-label">Modelo / Variante</label>
-            <input type="text" id="addProductModel" class="form-input" placeholder="Ex: Tamanho M, Azul, 110v...">
+        <div class="form-field" style="position:relative">
+            <label class="form-label"><i class="fa-solid fa-layer-group" style="color:var(--accent);font-size:0.75rem"></i> Modelo / Variante</label>
+            <input type="text" id="addProductModel" class="form-input" placeholder="Ex: 256GB, 110v, Preto..." autocomplete="off"
+                oninput="onModelInput(this.value);onSalePriceChange()" onblur="setTimeout(()=>closeSuggestions('modelSuggestions'),200)">
+            <div id="modelSuggestions" class="autocomplete-dropdown" style="display:none"></div>
+        </div>
+        <div class="form-input-row">
+            <div class="form-field">
+                <label class="form-label">Cor (Opcional)</label>
+                <input type="text" id="addProductColor" class="form-input" placeholder="Ex: Azul, Preto...">
+            </div>
+            <div class="form-field">
+                <label class="form-label">Tamanho (Opcional)</label>
+                <input type="text" id="addProductSize" class="form-input" placeholder="Ex: G, 42, 128GB...">
+            </div>
         </div>
         <div class="form-input-row">
             <div class="form-field">
@@ -1655,7 +1680,7 @@
         <!-- Painel de Inteligência de Preços da Região -->
         <div id="priceIntelPanel" class="price-intel-panel" style="display:none">
             <div class="price-intel-header">
-                <i class="fa-solid fa-chart-line"></i> Inteligência de Mercado
+                Cidade/Região
                 <span id="priceIntelLoading" class="price-intel-loading" style="display:none"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
             </div>
             <div id="priceIntelBody">
@@ -1706,6 +1731,9 @@
         </div>
         <button class="btn-primary" onclick="saveProduct()" id="btnSaveProduct">
             <i class="fa-solid fa-floppy-disk"></i> Salvar Produto
+        </button>
+        <button class="btn-danger" id="btnDeleteProduct" onclick="deleteProduct()" style="margin-top:12px;display:none">
+            <i class="fa-solid fa-trash-can"></i> Excluir Produto
         </button>
         <button class="btn-secondary" onclick="closeSheet('sheetAddProduct')">Cancelar</button>
     </div>
@@ -2240,6 +2268,19 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 /* ============================================================
+   ✅  ARQUITETURA V2 — SEM índice collectionGroup necessário
+   
+   A sincronização global usa globalData/{country}/products/{variantKey}
+   com um mapa "entries" por grupo. Não requer nenhum índice especial.
+   
+   O único índice criado automaticamente pelo Firestore para funcionar é
+   o índice padrão de campo único em "nameLower" (gerado automaticamente).
+   
+   Regras de segurança: as regras existentes já cobrem tudo:
+     match /globalData/{document=**} { allow read, write: if request.auth != null; }
+============================================================ */
+
+/* ============================================================
    STATE
 ============================================================ */
 let currentUser = null;
@@ -2282,6 +2323,11 @@ let fuelChartInstance = null;
 /* ============================================================
    UTILS
 ============================================================ */
+function normalizeId(str) {
+    if (!str) return '';
+    return str.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "_").replace(/_+/g, "_");
+}
+
 function formatBRL(val) {
     if (!val && val !== 0) return 'R$ 0,00';
     return 'R$ ' + Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -3650,6 +3696,7 @@ async function addCustomToCart() {
         const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
             name, categoryId: catId, categoryName: catName,
             salePrice: price, costPrice: finalCost,
+            location: currentGroup.location || null,
             model: '', description: '', unit: 'un', code,
             active: true, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdBy: currentUser.uid
@@ -3772,12 +3819,15 @@ async function loadProductsList(catId) {
         list.innerHTML = headerHtml + '<div class="products-list">' + docs.map(d => {
             const p = d.data();
             const showCost = canViewCost();
+            const alertIcon = p.marketAlert && p.marketAlert.type === 'price_low' 
+                ? `<i class="fa-solid fa-triangle-exclamation" style="color:var(--orange);font-size:0.75rem;margin-left:6px" title="Preço muito abaixo da média de mercado"></i>` 
+                : '';
             return `<div class="product-item" onclick="openProductDetail('${d.id}')">
                 <div>
                     <div class="product-code-badge">${p.code || '—'}</div>
                 </div>
                 <div class="product-info">
-                    <div class="product-name">${p.name}</div>
+                    <div class="product-name">${p.name}${alertIcon}</div>
                     <div class="product-model">${p.model || ''}</div>
                 </div>
                 <div style="text-align:right">
@@ -3840,7 +3890,7 @@ async function deleteCategoryAction() {
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
 }
 
-function openAddProductSheet() {
+function openAddProductSheet(targetCatId = null) {
     const bizType = currentGroup?.bizType || 'varejo';
     const isService = bizType === 'servicos';
     const isWholesale = bizType === 'atacado';
@@ -3860,25 +3910,17 @@ function openAddProductSheet() {
         <button class="btn-icon-sm" onclick="removeWholesaleTier(this)"><i class="fa-solid fa-xmark"></i></button>
     </div>`;
 
-    // Populate category select
-    const sel = document.getElementById('addProductCat');
-    // Reload categories into select
-    db.collection('groups').doc(currentGroupId).collection('categories').orderBy('name').get().then(snap => {
-        sel.innerHTML = '<option value="">Selecionar categoria...</option>';
-        snap.docs.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.id;
-            opt.textContent = d.data().name;
-            if (activeProductCat && d.id === activeProductCat.id) opt.selected = true;
-            sel.appendChild(opt);
-        });
-        sel.innerHTML += '<option value="__new__">+ Nova categoria</option>';
-    });
     // Reset form
     ['addProductName','addProductBrand','addProductModel','addProductDesc'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
     ['addProductSalePrice','addProductCostPrice'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
     document.getElementById('editProductId').value = '';
+    document.getElementById('editProductOriginalName').value = '';
+    document.getElementById('editProductOriginalModel').value = '';
+    document.getElementById('editProductOriginalBrand').value = '';
+    document.getElementById('addProductColor').value = ''; document.getElementById('addProductSize').value = '';
     document.getElementById('addProductStock').value = '0';
+    const btnDel = document.getElementById('btnDeleteProduct');
+    if(btnDel) btnDel.style.display = 'none';
     document.getElementById('newCatField').style.display = 'none';
     const priceIntel = document.getElementById('priceIntelPanel');
     if (priceIntel) priceIntel.style.display = 'none';
@@ -3894,7 +3936,39 @@ function openAddProductSheet() {
         costInput.placeholder = "0,00";
     }
 
+    // Prepare select and open sheet immediately
+    const sel = document.getElementById('addProductCat');
+    sel.innerHTML = '<option value="">Carregando...</option>';
     openSheet('sheetAddProduct');
+    
+    if (!currentGroupId) {
+        sel.innerHTML = '<option value="">Erro: Grupo não detectado</option>';
+        return;
+    }
+
+    // Removido orderBy para evitar erros de índice e ordenado via JS
+    db.collection('groups').doc(currentGroupId).collection('categories').get()
+        .then(snap => {
+            sel.innerHTML = '<option value="">Selecionar categoria...</option>';
+            const docs = snap.docs.map(d => ({id:d.id, ...d.data()}));
+            docs.sort((a,b) => (a.name||'').toString().localeCompare((b.name||'').toString()));
+            
+            docs.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name || 'Sem nome';
+                if (targetCatId && d.id === targetCatId) opt.selected = true;
+                else if (!targetCatId && activeProductCat && d.id === activeProductCat.id) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            const newOpt = document.createElement('option');
+            newOpt.value = '__new__'; newOpt.textContent = '+ Nova categoria';
+            sel.appendChild(newOpt);
+        })
+        .catch(err => {
+            console.error("Erro categorias:", err);
+            sel.innerHTML = `<option value="">Erro: ${err.message}</option><option value="__new__">+ Nova categoria</option>`;
+        });
 }
 
 function checkNewCatFromSelect(sel) {
@@ -3907,6 +3981,8 @@ async function saveProduct() {
     const brand = document.getElementById('addProductBrand').value.trim();
     const name = document.getElementById('addProductName').value.trim();
     const model = document.getElementById('addProductModel').value.trim();
+    const color = document.getElementById('addProductColor').value.trim();
+    const size = document.getElementById('addProductSize').value.trim();
     const salePrice = parseMoney(document.getElementById('addProductSalePrice').value);
     const costPrice = parseMoney(document.getElementById('addProductCostPrice').value);
     const unit = document.getElementById('addProductUnit').value;
@@ -3948,16 +4024,33 @@ async function saveProduct() {
 
         const productData = {
             name, brand: brand || '', categoryId: catId, categoryName: catName,
-            salePrice, costPrice: finalCost, model, description: desc, unit,
+            nameLower: name.toLowerCase().trim(), // Índice de busca global
+            salePrice, costPrice: finalCost, model, color, size, description: desc, unit,
+            location: currentGroup.location || null,
             wholesaleTiers,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
+        let targetId = editId;
         if (editId) {
-            // ATUALIZAR
-            await db.collection('groups').doc(currentGroupId).collection('products').doc(editId).update(productData);
+            // ATUALIZAR — inclui _docId para retrocompatibilidade com produtos antigos sem esse campo
+            await db.collection('groups').doc(currentGroupId).collection('products').doc(editId).update({
+                ...productData, _docId: editId
+            });
             showToast('Produto atualizado!', 'success');
             await addToFeed('product', `Atualizou ${bizType === 'servicos' ? 'serviço' : 'produto'}: ${name}`);
+
+            // Detectar mudança de nome ou variante — limpar entrada antiga no banco global
+            const originalName  = document.getElementById('editProductOriginalName').value.trim();
+            const originalModel = document.getElementById('editProductOriginalModel').value.trim();
+            const originalBrand = document.getElementById('editProductOriginalBrand').value.trim();
+            const nameChanged  = originalName  && originalName.toLowerCase()  !== name.toLowerCase().trim();
+            const modelChanged = originalModel !== model.trim();
+            if (nameChanged || modelChanged) {
+                // Remove este produto da estatística do nome/variante anterior
+                // Passa currentData = null + o editId para ser filtrado da lista
+                await syncToGlobalDB(originalName, originalBrand, originalModel, 0, 0, editId, null);
+            }
         } else {
             // CRIAR NOVO
             const groupDoc = await db.collection('groups').doc(currentGroupId).get();
@@ -3970,6 +4063,9 @@ async function saveProduct() {
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 createdBy: currentUser.uid
             });
+            targetId = prodRef.id;
+            // Guardar o próprio ID no documento para filtragem segura no collectionGroup
+            await prodRef.update({ _docId: prodRef.id });
             
             // Estoque inicial
             if (stockQty > 0) {
@@ -3984,7 +4080,8 @@ async function saveProduct() {
         }
 
         // Sincronizar banco global (marca + produto + preço)
-        syncToGlobalDB(name, brand, salePrice, finalCost);
+        const currentDataForSync = { ...productData, id: targetId, active: true };
+        syncToGlobalDB(name, brand, model, salePrice, finalCost, targetId, currentDataForSync);
 
         closeSheet('sheetAddProduct');
         loadProductsTab();
@@ -3992,6 +4089,41 @@ async function saveProduct() {
         showToast('Erro: ' + e.message, 'error');
     } finally {
         setLoading('btnSaveProduct', false, '<i class="fa-solid fa-floppy-disk"></i> Salvar Produto');
+    }
+}
+
+async function deleteProduct() {
+    const id = document.getElementById('editProductId').value;
+    if (!id) return;
+    
+    // 1. Obter dados para limpar inteligência de mercado ANTES de excluir
+    let prodData = null;
+    try {
+        const doc = await db.collection('groups').doc(currentGroupId).collection('products').doc(id).get();
+        if (doc.exists) { prodData = doc.data(); prodData.id = id; }
+    } catch(e) { console.warn('Erro ao ler produto para exclusão:', e); }
+
+    if (!confirm('Tem certeza que deseja excluir este produto? O estoque associado também será removido.')) return;
+    
+    setLoading('btnDeleteProduct', true);
+    try {
+        await db.collection('groups').doc(currentGroupId).collection('products').doc(id).delete();
+        // Tentar remover estoque associado (opcional, mas limpa o banco)
+        try { await db.collection('groups').doc(currentGroupId).collection('stock').doc(id).delete(); } catch(e){}
+        
+        // 2. Sincronizar exclusão (recalcular estatísticas removendo este produto)
+        if (prodData) {
+            // Passa null em currentData para indicar que este item não deve ser adicionado, e o ID para ser filtrado
+            await syncToGlobalDB(prodData.name, prodData.brand, prodData.model, 0, 0, id, null);
+        }
+
+        showToast('Produto excluído!', 'success');
+        closeSheet('sheetAddProduct');
+        loadProductsTab();
+    } catch(e) {
+        showToast('Erro ao excluir: ' + e.message, 'error');
+    } finally {
+        setLoading('btnDeleteProduct', false, '<i class="fa-solid fa-trash-can"></i> Excluir Produto');
     }
 }
 
@@ -4003,14 +4135,22 @@ async function openProductDetail(productId) {
         const p = doc.data();
         const bizType = currentGroup?.bizType || 'varejo';
         
-        openAddProductSheet(); // Abre e reseta
+        openAddProductSheet(p.categoryId); // Abre, reseta e pré-seleciona categoria
         const titleEl = document.getElementById('addProductSheetTitle');
         if (titleEl) titleEl.textContent = bizType === 'servicos' ? 'Editar Serviço' : 'Editar Produto';
         document.getElementById('editProductId').value = productId;
+        // Guardar valores originais para detectar mudança de nome/variante durante edição
+        document.getElementById('editProductOriginalName').value = p.name || '';
+        document.getElementById('editProductOriginalModel').value = p.model || '';
+        document.getElementById('editProductOriginalBrand').value = p.brand || '';
+        const btnDel = document.getElementById('btnDeleteProduct');
+        if(btnDel) btnDel.style.display = 'block';
         document.getElementById('addProductName').value = p.name;
         const brandEl = document.getElementById('addProductBrand');
         if (brandEl) brandEl.value = p.brand || '';
         document.getElementById('addProductModel').value = p.model || '';
+        document.getElementById('addProductColor').value = p.color || '';
+        document.getElementById('addProductSize').value = p.size || '';
         document.getElementById('addProductDesc').value = p.description || '';
         document.getElementById('addProductSalePrice').value = (p.salePrice || 0).toFixed(2).replace('.',',');
         
@@ -4022,7 +4162,6 @@ async function openProductDetail(productId) {
         }
 
         document.getElementById('addProductUnit').value = p.unit || 'un';
-        document.getElementById('addProductCat').value = p.categoryId;
         // Esconder estoque inicial na edição (gerenciado na aba estoque)
         document.getElementById('addProductStock').parentElement.parentElement.style.display = 'none';
 
@@ -4038,6 +4177,9 @@ async function openProductDetail(productId) {
                     </div>`).join('');
             }
         }
+
+        // Carregar inteligência de preço ao abrir edição
+        if (p.name) loadPriceIntelligence(p.name);
     } catch(e) { showToast('Erro ao carregar: ' + e.message, 'error'); }
 }
 
@@ -6068,6 +6210,25 @@ async function generateUpdatesList() {
             }
         });
 
+        // Buscar produtos com alerta de preço
+        try {
+            const prodSnap = await db.collection('groups').doc(currentGroupId).collection('products')
+                .where('marketAlert.type', '==', 'price_low').get();
+            
+            prodSnap.docs.forEach(doc => {
+                const p = doc.data();
+                updates.push({
+                    id: doc.id,
+                    type: 'price_alert',
+                    date: p.updatedAt || p.createdAt,
+                    title: `Preço suspeito: ${p.name}`,
+                    description: `Valor ${formatBRL(p.salePrice)} está muito abaixo da média (${formatBRL(p.marketAlert.avg)}).`,
+                    icon: 'fa-tag',
+                    color: 'var(--orange)'
+                });
+            });
+        } catch(e) { console.warn('Updates prod error:', e); }
+
         // Add other update types here in the future
         // e.g., new members, goals, etc.
 
@@ -6504,6 +6665,7 @@ async function saveEditGroup() {
 ============================================================ */
 let brandSearchTimeout = null;
 let productNameSearchTimeout = null;
+let modelSearchTimeout = null;
 let priceIntelTimeout = null;
 
 function closeSuggestions(id) {
@@ -6525,6 +6687,12 @@ function onProductNameInput(val) {
     priceIntelTimeout = setTimeout(() => loadPriceIntelligence(val), 800);
 }
 
+function onModelInput(val) {
+    clearTimeout(modelSearchTimeout);
+    if (val.length < 1) { closeSuggestions('modelSuggestions'); return; }
+    modelSearchTimeout = setTimeout(() => searchGlobalModels(val), 350);
+}
+
 function onSalePriceChange() {
     const name = document.getElementById('addProductName')?.value.trim();
     if (name && name.length >= 2) {
@@ -6536,9 +6704,9 @@ function onSalePriceChange() {
 function getLocationPath() {
     if (!currentGroup?.location) return null;
     const loc = currentGroup.location;
-    const country = (loc.country || 'brasil').toLowerCase().replace(/\s+/g, '_');
-    const state = (loc.state || 'desconhecido').toLowerCase();
-    const city = (loc.city || 'desconhecida').toLowerCase().replace(/\s+/g, '_');
+    const country = normalizeId(loc.country || 'brasil');
+    const state = normalizeId(loc.state || 'desconhecido');
+    const city = normalizeId(loc.city || 'desconhecida');
     return { country, state, city };
 }
 
@@ -6547,31 +6715,17 @@ async function searchGlobalBrands(query) {
     if (!container) return;
     const q = query.toLowerCase().trim();
     try {
-        // Buscar no banco global hierárquico
         const loc = getLocationPath();
-        const results = new Set();
-        
-        // Busca por cidade
-        if (loc) {
-            const citySnap = await db.collection('globalData').doc(loc.country).collection(loc.state).doc(loc.city).collection('brands')
-                .where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff').limit(5).get();
-            citySnap.docs.forEach(d => results.add(d.data().name));
-            
-            // Busca nacional se pouco resultado
-            if (results.size < 3) {
-                const nationalSnap = await db.collection('globalData').doc('brasil').collection('_national').doc('brands_index')
-                    .get();
-                if (nationalSnap.exists) {
-                    const brands = nationalSnap.data().brands || [];
-                    brands.filter(b => b.toLowerCase().startsWith(q)).slice(0, 5).forEach(b => results.add(b));
-                }
-            }
-        }
-        
-        const arr = Array.from(results).slice(0, 6);
+        const country = loc?.country || 'brasil';
+        const snap = await db.collection('globalData').doc(country)
+            .collection('brands')
+            .where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff')
+            .limit(8).get();
+        const arr = snap.docs.map(d => d.data().name);
         if (arr.length === 0) { container.style.display = 'none'; return; }
-        
-        container.innerHTML = arr.map(b => `<div class="autocomplete-item" onclick="selectBrand('${b.replace(/'/g,"\\'")}')">${b}</div>`).join('');
+        container.innerHTML = arr.map(b => `<div class="autocomplete-item" onclick="selectBrand('${b.replace(/'/g,"\\'")}')">
+            <span class="autocomplete-item-name">${b}</span>
+        </div>`).join('');
         container.style.display = 'block';
     } catch(e) { container.style.display = 'none'; }
 }
@@ -6580,9 +6734,34 @@ function selectBrand(brand) {
     const el = document.getElementById('addProductBrand');
     if (el) el.value = brand;
     closeSuggestions('brandSuggestions');
-    // Atualizar busca de produtos com a marca
     const prodName = document.getElementById('addProductName')?.value.trim();
     if (prodName) loadPriceIntelligence(prodName);
+}
+
+async function searchGlobalModels(query) {
+    const container = document.getElementById('modelSuggestions');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    try {
+        const loc = getLocationPath();
+        const country = loc?.country || 'brasil';
+        const snap = await db.collection('globalData').doc(country)
+            .collection('models')
+            .where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff')
+            .limit(6).get();
+        const arr = snap.docs.map(d => d.data().name);
+        if (arr.length === 0) { container.style.display = 'none'; return; }
+        container.innerHTML = arr.map(m => `<div class="autocomplete-item" onclick="selectModel('${m.replace(/'/g,"\\'")}')">
+            <span class="autocomplete-item-name">${m}</span>
+        </div>`).join('');
+        container.style.display = 'block';
+    } catch(e) { container.style.display = 'none'; }
+}
+
+function selectModel(name) {
+    const el = document.getElementById('addProductModel');
+    if (el) el.value = name;
+    closeSuggestions('modelSuggestions');
 }
 
 async function searchGlobalProducts(query) {
@@ -6591,17 +6770,35 @@ async function searchGlobalProducts(query) {
     const q = query.toLowerCase().trim();
     try {
         const loc = getLocationPath();
-        const results = new Set();
-        if (loc) {
-            const citySnap = await db.collection('globalData').doc(loc.country).collection(loc.state).doc(loc.city).collection('products')
-                .where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff').limit(8).get();
-            citySnap.docs.forEach(d => results.add(d.data().name));
-        }
-        
-        const arr = Array.from(results).slice(0, 6);
-        if (arr.length === 0) { container.style.display = 'none'; return; }
-        
-        container.innerHTML = arr.map(p => `<div class="autocomplete-item" onclick="selectProductName('${p.replace(/'/g,"\\'")}')">${p}</div>`).join('');
+        const country = loc?.country || 'brasil';
+
+        const snap = await db.collection('globalData').doc(country)
+            .collection('products')
+            .where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff')
+            .limit(20).get();
+
+        if (snap.empty) { container.style.display = 'none'; return; }
+
+        // Agrupa por nome base (sem variante) p/ não mostrar "iPhone 15 128GB" e "iPhone 15 256GB" separados
+        const byBase = new Map();
+        snap.docs.forEach(d => {
+            const item = d.data();
+            const base = item.name || item.nameLower;
+            if (!byBase.has(base)) byBase.set(base, { name: base, count: 0 });
+            byBase.get(base).count += (item._entryCount || item._national?.n || 1);
+        });
+
+        const arr = Array.from(byBase.values())
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 6);
+
+        container.innerHTML = arr.map(item => {
+            const label = item.count === 1 ? '1 cadastro' : `${item.count} cadastros`;
+            return `<div class="autocomplete-item" onclick="selectProductName('${item.name.replace(/'/g,"\\'")}')">
+                <span class="autocomplete-item-name">${item.name}</span>
+                <span class="autocomplete-item-count">${label}</span>
+            </div>`;
+        }).join('');
         container.style.display = 'block';
     } catch(e) { container.style.display = 'none'; }
 }
@@ -6615,154 +6812,276 @@ function selectProductName(name) {
 
 /* ============================================================
    💰 INTELIGÊNCIA DE PREÇOS
+   Lê de globalData/{country}/products/{variantKey}
+   Filtra entries por cidade/estado/nacional para exibir stats
 ============================================================ */
 async function loadPriceIntelligence(productName) {
     const panel = document.getElementById('priceIntelPanel');
-    const body = document.getElementById('priceIntelBody');
+    const body  = document.getElementById('priceIntelBody');
     const loading = document.getElementById('priceIntelLoading');
     if (!panel || !body) return;
-    
+
     const q = productName.toLowerCase().trim();
     if (q.length < 2) { panel.style.display = 'none'; return; }
-    
+
+    const model      = (document.getElementById('addProductModel')?.value || '').toLowerCase().trim();
+    const variantKey = model ? `${q} ${model}` : q;
+    const docId      = normalizeId(variantKey);
+
     panel.style.display = 'block';
     if (loading) loading.style.display = 'inline';
     body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 0">Buscando preços na região...</div>';
-    
+
+    const loc = getLocationPath();
+    if (!loc) {
+        body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Configure a localização do grupo para ver preços da região.</div>';
+        if (loading) loading.style.display = 'none';
+        return;
+    }
+
     try {
-        const loc = getLocationPath();
-        if (!loc) { body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Configure a localização do grupo para ver preços da região.</div>'; if(loading)loading.style.display='none'; return; }
-        
-        const levels = [
-            { label: '📍 Sua cidade', path: `globalData/${loc.country}/${loc.state}/${loc.city}/products` },
-            { label: '🏙️ Estado', path: `globalData/${loc.country}/${loc.state}/_state/products` },
-            { label: '🇧🇷 Brasil', path: `globalData/brasil/_national/products` }
-        ];
-        
+        const country = loc.country;
+        const colRef  = db.collection('globalData').doc(country).collection('products');
+        const docRef  = colRef.doc(docId);
+        const doc     = await docRef.get();
+
         let html = '';
-        for (const level of levels) {
-            try {
-                const snap = await db.collection(level.path.split('/')[0])
-                    .doc(level.path.split('/')[1]);
-                // Usar a subcoleção diretamente
-                const parts = level.path.split('/');
-                let ref = db;
-                parts.forEach((p, i) => { ref = i % 2 === 0 ? ref.collection(p) : ref.doc(p); });
-                const qSnap = await ref.where('nameLower', '>=', q).where('nameLower', '<=', q + '\uf8ff').limit(50).get();
-                
-                if (qSnap.empty) continue;
-                
-                const prices = [], costs = [], margins = [];
-                qSnap.docs.forEach(d => {
-                    const data = d.data();
-                    if (data.avgSalePrice) prices.push(data.avgSalePrice);
-                    if (data.avgCostPrice) costs.push(data.avgCostPrice);
-                    if (data.avgMargin) margins.push(data.avgMargin);
-                });
-                
-                if (prices.length === 0) continue;
-                
-                const min = Math.min(...prices), max = Math.max(...prices);
-                const avg = prices.reduce((a,b) => a+b, 0) / prices.length;
-                const avgCost = costs.length ? costs.reduce((a,b)=>a+b,0)/costs.length : 0;
-                const avgMargin = margins.length ? margins.reduce((a,b)=>a+b,0)/margins.length : (avg && avgCost ? (avg-avgCost)/avg*100 : 0);
-                
-                html += `<div class="price-intel-row">
-                    <div class="price-intel-level">${level.label}</div>
+
+        if (doc.exists) {
+            const data = doc.data();
+            // Tentar stats pré-calculadas primeiro (mais rápido)
+            const cityStats  = data._city?.[loc.city];
+            const stateStats = data._state?.[loc.state];
+            const natStats   = data._national;
+
+            const renderRow = (label, stats) => {
+                if (!stats || stats.n === 0) return '';
+                const lojas = stats.n === 1 ? '1 loja' : `${stats.n} lojas`;
+                return `<div class="price-intel-row">
+                    <div class="price-intel-level">${label} · <span style="color:var(--text-main);font-weight:600">${data.name}</span> <span style="color:var(--text-muted)">(${lojas})</span></div>
                     <div class="price-intel-stats">
-                        <span class="pi-stat min">Mín <strong>${formatBRL(min)}</strong></span>
-                        <span class="pi-stat avg">Méd <strong>${formatBRL(avg)}</strong></span>
-                        <span class="pi-stat max">Máx <strong>${formatBRL(max)}</strong></span>
-                        ${avgMargin ? `<span class="pi-stat margin">Margem <strong>${avgMargin.toFixed(1)}%</strong></span>` : ''}
+                        <span class="pi-stat min">Mín <strong>${formatBRL(stats.min)}</strong></span>
+                        <span class="pi-stat avg">Méd <strong>${formatBRL(stats.avg)}</strong></span>
+                        <span class="pi-stat max">Máx <strong>${formatBRL(stats.max)}</strong></span>
+                        ${stats.m ? `<span class="pi-stat margin">Margem <strong>${stats.m.toFixed(1)}%</strong></span>` : ''}
                     </div>
                 </div>`;
-            } catch(e) { /* nível sem dados */ }
+            };
+
+            html += renderRow('Sua cidade', cityStats);
+            html += renderRow('Estado',     stateStats);
+            html += renderRow('Brasil',     natStats);
+
+            if (html) {
+                body.innerHTML = html;
+                if (loading) loading.style.display = 'none';
+                return;
+            }
         }
-        
-        body.innerHTML = html || '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Nenhum dado de preço disponível para este produto ainda. Você será o primeiro! 🚀</div>';
+
+        // Produto exato não encontrado — buscar variantes pelo prefixo do nome base
+        // Ex: "iphone 15" → acha "iphone 15 128gb", "iphone 15 256gb", "iphone 15 pro"
+        const prefixSnap = await colRef
+            .where('nameLower', '>=', q)
+            .where('nameLower', '<=', q + '\uf8ff')
+            .limit(15).get();
+
+        if (!prefixSnap.empty) {
+            html += `<div class="price-intel-similar-notice">
+                <i class="fa-solid fa-circle-info"></i>
+                Este produto exato não foi encontrado na região. Veja variações disponíveis:
+            </div>`;
+
+            const seen = new Set();
+            prefixSnap.docs
+                .map(d => d.data())
+                .sort((a, b) => (b._entryCount || 0) - (a._entryCount || 0))
+                .forEach(item => {
+                    if (seen.has(item.nameLower)) return;
+                    seen.add(item.nameLower);
+                    // Prioriza stats da cidade, depois estado, depois nacional
+                    const stats = item._city?.[loc.city] || item._state?.[loc.state] || item._national;
+                    if (!stats || stats.n === 0) return;
+                    const lojas = stats.n === 1 ? '1 loja' : `${stats.n} lojas`;
+                    html += `<div class="price-intel-row price-intel-similar">
+                        <div class="price-intel-level"><span style="color:var(--text-main);font-weight:600">${item.name}</span> <span style="color:var(--text-muted)">(${lojas})</span></div>
+                        <div class="price-intel-stats">
+                            <span class="pi-stat min">Mín <strong>${formatBRL(stats.min)}</strong></span>
+                            <span class="pi-stat avg">Méd <strong>${formatBRL(stats.avg)}</strong></span>
+                            <span class="pi-stat max">Máx <strong>${formatBRL(stats.max)}</strong></span>
+                            ${stats.m ? `<span class="pi-stat margin">Margem <strong>${stats.m.toFixed(1)}%</strong></span>` : ''}
+                        </div>
+                    </div>`;
+                });
+        }
+
+        body.innerHTML = html || '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Nenhum dado ainda. Você será o primeiro! 🚀</div>';
     } catch(e) {
-        body.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:4px 0">Erro ao buscar dados.</div>';
+        body.innerHTML = `<div style="font-size:0.72rem;color:var(--danger,#f44336);padding:4px 0"><i class="fa-solid fa-triangle-exclamation"></i> Erro: ${e.message}</div>`;
     } finally {
         if (loading) loading.style.display = 'none';
     }
 }
 
 /* ============================================================
-   🌐 SINCRONIZAR BANCO GLOBAL
+   🌐 SINCRONIZAR BANCO GLOBAL (V2)
+   
+   Nova arquitetura — SEM collectionGroup, SEM regra especial de segurança.
+   Cada variante tem UM documento em globalData/{country}/products/{variantKey}.
+   Dentro do doc, um mapa "entries" guarda o preço de cada grupo/produto.
+   
+   Vantagens:
+   - Exclusão correta: delete entries[groupId_productId]
+   - Sem regras de segurança extras
+   - Sem índice collectionGroup
+   - Stats calculadas de todos os grupos em tempo real
+   
+   Estrutura do documento:
+   {
+     name, nameLower, brand, model,
+     entries: { "groupId_prodId": { p: price, c: cost, ci: city, s: state } },
+     _city:     { "campo_mourao": { avg, min, max, n, m? } },
+     _state:    { "pr": { avg, min, max, n, m? } },
+     _national: { avg, min, max, n, m? },
+     _entryCount: N,
+     updatedAt
+   }
 ============================================================ */
-async function syncToGlobalDB(productName, brand, salePrice, costPrice) {
+async function syncToGlobalDB(productName, brand, model, salePrice, costPrice, productId, currentData) {
     if (!currentGroup?.location?.city) return;
+    if (!currentGroupId || !productId) return;
+
     const loc = getLocationPath();
     if (!loc) return;
-    
-    const nameLower = productName.toLowerCase().trim();
-    const nameLowerBrand = (brand || '').toLowerCase().trim();
-    const margin = salePrice && costPrice ? (salePrice - costPrice) / salePrice * 100 : 0;
-    
+
+    const nameLower  = productName.toLowerCase().trim();
+    const modelLower = (model || '').toLowerCase().trim();
+    const variantKey = modelLower ? `${nameLower} ${modelLower}` : nameLower;
+    const docId      = normalizeId(variantKey);
+    const entryKey   = `${currentGroupId}_${productId}`; // Chave única por grupo+produto
+
+    // Sincronizar marca (coleção separada simples)
+    const brandLower = (brand || '').toLowerCase().trim();
+    if (brandLower.length > 1) {
+        db.collection('globalData').doc(loc.country).collection('brands').doc(brandLower)
+            .set({ name: brand, nameLower: brandLower, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+            .catch(() => {});
+    }
+    // Sincronizar modelo
+    if (modelLower.length > 0) {
+        db.collection('globalData').doc(loc.country).collection('models').doc(modelLower)
+            .set({ name: model, nameLower: modelLower, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+            .catch(() => {});
+    }
+
+    const docRef = db.collection('globalData').doc(loc.country).collection('products').doc(docId);
+
     try {
-        const batch = db.batch();
-        
-        // Sincronizar marca no nível da cidade
-        if (brand && nameLowerBrand.length > 1) {
-            const brandRef = db.collection('globalData').doc(loc.country)
-                .collection(loc.state).doc(loc.city).collection('brands').doc(nameLowerBrand);
-            batch.set(brandRef, { name: brand, nameLower: nameLowerBrand, count: firebase.firestore.FieldValue.increment(1), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-            
-            // Índice nacional de marcas
-            // (simplificado — usa arrayUnion)
-        }
-        
-        // Sincronizar produto e preço na cidade
-        const cityProdRef = db.collection('globalData').doc(loc.country)
-            .collection(loc.state).doc(loc.city).collection('products').doc(nameLower);
-        
-        // Atualiza média de forma ponderada simples
-        const existingDoc = await cityProdRef.get();
-        let newData;
-        if (existingDoc.exists) {
-            const ex = existingDoc.data();
-            const count = (ex.count || 1) + 1;
-            newData = {
-                name: productName, nameLower,
-                brand: brand || ex.brand || '',
-                avgSalePrice: ((ex.avgSalePrice || salePrice) * (count-1) + salePrice) / count,
-                avgCostPrice: costPrice ? ((ex.avgCostPrice || costPrice) * (count-1) + costPrice) / count : ex.avgCostPrice,
-                avgMargin: ((ex.avgMargin || margin) * (count-1) + margin) / count,
-                minPrice: Math.min(ex.minPrice || salePrice, salePrice),
-                maxPrice: Math.max(ex.maxPrice || salePrice, salePrice),
-                count, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
+        if (currentData === null) {
+            // ——— EXCLUSÃO: remover entrada deste produto ———
+            const delUpdate = {};
+            delUpdate[`entries.${entryKey}`] = firebase.firestore.FieldValue.delete();
+            delUpdate['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+            await docRef.update(delUpdate).catch(() => {}); // Ignora se doc não existir
         } else {
-            newData = {
-                name: productName, nameLower, brand: brand || '',
-                avgSalePrice: salePrice, avgCostPrice: costPrice || 0, avgMargin: margin,
-                minPrice: salePrice, maxPrice: salePrice,
-                count: 1, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
+            // ——— SALVAR/ATUALIZAR: registrar entrada deste grupo ———
+            const entry = { p: salePrice, ci: loc.city, s: loc.state };
+            if (costPrice > 0) entry.c = costPrice;
+
+            // IMPORTANTE: set() com { merge: true } NÃO interpreta pontos como caminho
+            // aninhado — trata como nome literal de campo. Apenas update() faz isso.
+            // Por isso separamos: set() para os metadados do doc, update() para a entry.
+            await docRef.set({
+                name: currentData.name,
+                nameLower: variantKey,
+                brand: brand || '',
+                model: model || '',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            // update() SIM interpreta "entries.grupoid_prodid" como campo aninhado
+            const entryUpdate = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+            entryUpdate[`entries.${entryKey}`] = entry;
+            await docRef.update(entryUpdate);
         }
-        batch.set(cityProdRef, newData, { merge: true });
+
+        // ——— RECALCULAR ESTATÍSTICAS a partir de todas as entries ———
+        const snap = await docRef.get();
+        if (!snap.exists) return;
+
+        const rawData = snap.data();
+
+        // MIGRAÇÃO: limpar campos com ponto literal no nome (bug do set() antigo)
+        // Detecta campos como "entries.abc_def" no nível raiz e move para entries.abc_def real
+        const literalDotFields = Object.keys(rawData).filter(k => k.startsWith('entries.'));
+        if (literalDotFields.length > 0) {
+            const migrationUpdate = {};
+            literalDotFields.forEach(k => {
+                const subKey = k.slice('entries.'.length); // ex: "grupoid_prodid"
+                migrationUpdate[`entries.${subKey}`] = rawData[k]; // escreve como caminho real
+                migrationUpdate[k] = firebase.firestore.FieldValue.delete(); // apaga o campo errado
+            });
+            await docRef.update(migrationUpdate).catch(() => {});
+            // Reler após migração
+            const freshSnap = await docRef.get();
+            if (!freshSnap.exists) return;
+            Object.assign(rawData, freshSnap.data());
+        }
+
+        const entries   = rawData.entries || {};
+        const cityP = [], cityM = [], stateP = [], stateM = [], natP = [], natM = [];
+
+        Object.values(entries).forEach(e => {
+            if (!e.p || e.p <= 0) return;
+            natP.push(e.p);
+            if (e.c > 0) natM.push((e.p - e.c) / e.p * 100);
+
+            if (e.s === loc.state) {
+                stateP.push(e.p);
+                if (e.c > 0) stateM.push((e.p - e.c) / e.p * 100);
+            }
+            if (e.ci === loc.city) {
+                cityP.push(e.p);
+                if (e.c > 0) cityM.push((e.p - e.c) / e.p * 100);
+            }
+        });
+
+        const calcStat = (prices, margins) => {
+            if (prices.length === 0) return null;
+            const avg = prices.reduce((a,b)=>a+b,0) / prices.length;
+            const s = { avg, min: Math.min(...prices), max: Math.max(...prices), n: prices.length };
+            if (margins.length > 0) s.m = margins.reduce((a,b)=>a+b,0) / margins.length;
+            return s;
+        };
+
+        const cityStats  = calcStat(cityP,  cityM);
+        const stateStats = calcStat(stateP, stateM);
+        const natStats   = calcStat(natP,   natM);
+
+        const statsUpdate = { _entryCount: Object.keys(entries).length, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        if (natStats) statsUpdate._national = natStats; else statsUpdate._national = firebase.firestore.FieldValue.delete();
         
-        // Também sincronizar no nível do estado
-        const stateProdRef = db.collection('globalData').doc(loc.country)
-            .collection(loc.state).doc('_state').collection('products').doc(nameLower);
-        batch.set(stateProdRef, {
-            name: productName, nameLower, brand: brand || '',
-            avgSalePrice: salePrice, avgCostPrice: costPrice || 0, avgMargin: margin,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        
-        // Nacional
-        const nationalRef = db.collection('globalData').doc('brasil')
-            .collection('_national').doc('products').collection('items').doc(nameLower);
-        batch.set(nationalRef, {
-            name: productName, nameLower, brand: brand || '',
-            avgSalePrice: salePrice, count: firebase.firestore.FieldValue.increment(1),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        
-        await batch.commit();
-    } catch(e) { console.warn('syncToGlobalDB:', e.message); }
+        // Mapa _city e _state: merge apenas a chave da localização atual
+        statsUpdate[`_city.${loc.city}`]   = cityStats  || firebase.firestore.FieldValue.delete();
+        statsUpdate[`_state.${loc.state}`] = stateStats || firebase.firestore.FieldValue.delete();
+
+        await docRef.update(statsUpdate);
+
+        // Alerta de preço baixo para o produto no grupo
+        if (currentData !== null && salePrice > 0 && cityStats && cityStats.n >= 2) {
+            const alertRef = db.collection('groups').doc(currentGroupId).collection('products').doc(productId);
+            if (salePrice < cityStats.avg * 0.7) {
+                alertRef.update({ marketAlert: { type: 'price_low', avg: cityStats.avg, diff: (cityStats.avg - salePrice) / cityStats.avg } }).catch(()=>{});
+            } else {
+                alertRef.update({ marketAlert: firebase.firestore.FieldValue.delete() }).catch(()=>{});
+            }
+        }
+
+    } catch(e) {
+        console.warn('syncToGlobalDB:', e.message);
+    }
 }
+
 
 /* ============================================================
    🏭 ATACADO — Funções específicas
@@ -6935,6 +7254,7 @@ async function saveService() {
         const serviceData = {
             name, categoryId: catId, categoryName: catName,
             hourRate, departure, additional, description: desc,
+            location: currentGroup.location || null,
             salePrice: hourRate, // compatibilidade com sistema de vendas
             costPrice: 0, unit: 'h',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -7950,6 +8270,22 @@ async function runSplash(skipIntro, userNickname) {
     document.getElementById('app').classList.add('visible');
     splash.classList.add('exit');
     setTimeout(() => splash.style.display = 'none', 850);
+}
+
+/* ============================================================
+   UI HELPERS
+============================================================ */
+function toggleGroupStats() {
+    const wrapper = document.getElementById('groupStatsWrapper');
+    const btn = document.getElementById('btnToggleGroupStats');
+    
+    if (wrapper.classList.contains('open')) {
+        wrapper.classList.remove('open');
+        btn.innerHTML = 'Ver Desempenho do Grupo <i class="fa-solid fa-chevron-down" style="margin-left:6px"></i>';
+    } else {
+        wrapper.classList.add('open');
+        btn.innerHTML = 'Ocultar Desempenho do Grupo <i class="fa-solid fa-chevron-up" style="margin-left:6px"></i>';
+    }
 }
 
 /* ============================================================
