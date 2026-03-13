@@ -45,7 +45,7 @@
     </div>
     <div class="auth-header">
         <img src="powered_clearview.png" alt="Clearview" class="auth-logo-img">
-        <div class="auth-brand-tag">Numera · Gestão Empresarial</div>
+        <div class="auth-brand-tag">Numera | Gestão Empresarial</div>
     </div>
     <div class="auth-panels-outer">
         <div class="auth-panels-track" id="authPanelsTrack">
@@ -7009,23 +7009,33 @@ async function syncToGlobalDB(productName, brand, model, salePrice, costPrice, p
         const snap = await docRef.get();
         if (!snap.exists) return;
 
-        const rawData = snap.data();
+        let rawData = snap.data();
 
         // MIGRAÇÃO: limpar campos com ponto literal no nome (bug do set() antigo)
         // Detecta campos como "entries.abc_def" no nível raiz e move para entries.abc_def real
         const literalDotFields = Object.keys(rawData).filter(k => k.startsWith('entries.'));
         if (literalDotFields.length > 0) {
-            const migrationUpdate = {};
+            const updateArgs = [];
             literalDotFields.forEach(k => {
                 const subKey = k.slice('entries.'.length); // ex: "grupoid_prodid"
-                migrationUpdate[`entries.${subKey}`] = rawData[k]; // escreve como caminho real
-                migrationUpdate[k] = firebase.firestore.FieldValue.delete(); // apaga o campo errado
+                
+                // Copia apenas se não existir no objeto aninhado atual 
+                // (para não sobrescrever dados atualizados no passo anterior)
+                if (!rawData.entries || rawData.entries[subKey] === undefined) {
+                    updateArgs.push(`entries.${subKey}`, rawData[k]);
+                }
+                
+                // Remove o campo com ponto literal da raiz (uso do FieldPath obrigatório)
+                updateArgs.push(new firebase.firestore.FieldPath(k), firebase.firestore.FieldValue.delete());
             });
-            await docRef.update(migrationUpdate).catch(() => {});
-            // Reler após migração
-            const freshSnap = await docRef.get();
-            if (!freshSnap.exists) return;
-            Object.assign(rawData, freshSnap.data());
+            
+            if (updateArgs.length > 0) {
+                await docRef.update(...updateArgs).catch(e => console.error("Migração falhou:", e));
+                // Reler após migração
+                const freshSnap = await docRef.get();
+                if (!freshSnap.exists) return;
+                rawData = freshSnap.data();
+            }
         }
 
         const entries   = rawData.entries || {};
