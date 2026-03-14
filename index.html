@@ -407,17 +407,19 @@
                 </div>
 
                 <!-- Feed -->
-                <div class="section-label">
-                    <span>Atividade recente</span>
+                <div class="section-label" style="margin-bottom: 12px;">
+                    <div style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:normal;">
+                        <span style="text-transform:uppercase; letter-spacing:2.5px;">Atividade recente</span>
+                        <select class="inline-filter-select" onchange="setFeedFilter(this.value)">
+                            <option value="24h">24h</option>
+                            <option value="7d">7 dias</option>
+                            <option value="30d">1 mês</option>
+                            <option value="3m">3 meses</option>
+                            <option value="1y">1 ano</option>
+                            <option value="max">Tudo</option>
+                        </select>
+                    </div>
                     <button class="section-label-btn" onclick="loadFeed(true)"><i class="fa-solid fa-rotate-right"></i></button>
-                </div>
-                <div class="feed-filters">
-                    <button class="feed-filter-btn active" onclick="setFeedFilter('24h', this)">24h</button>
-                    <button class="feed-filter-btn" onclick="setFeedFilter('7d', this)">7 dias</button>
-                    <button class="feed-filter-btn" onclick="setFeedFilter('30d', this)">1 mês</button>
-                    <button class="feed-filter-btn" onclick="setFeedFilter('3m', this)">3 meses</button>
-                    <button class="feed-filter-btn" onclick="setFeedFilter('1y', this)">1 ano</button>
-                    <button class="feed-filter-btn" onclick="setFeedFilter('max', this)">Tudo</button>
                 </div>
                 <div class="feed-list" id="feedList">
                     <div class="loading-state"><div class="loading-spinner"></div> Carregando...</div>
@@ -1689,7 +1691,7 @@
         <!-- Painel de Inteligência de Preços da Região -->
         <div id="priceIntelPanel" class="section-card" style="display:none; margin: 4px 0 12px;">
             <div class="section-card-title" style="margin-bottom: 12px;">
-                <span><i class="fa-solid fa-brain" style="color:var(--accent)"></i> Clearview Intelligence</span>
+                <span><i class="fa-solid fa-lightbulb" style="color:var(--accent)"></i> Numera Smart View</span>
                 <span id="priceIntelLoading" class="price-intel-loading" style="display:none"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
             </div>
             <div class="chart-toggle" style="margin-bottom: 12px; display:flex;">
@@ -3111,27 +3113,41 @@ function setHomeChart(period) {
     const values = data.map(d => d.value);
     const labels = data.map(d => d.label);
     const maxVal = Math.max(...values, 1);
+        
+        const gradient = context.createLinearGradient(0, 0, 0, 160);
+        if (isDark) {
+            gradient.addColorStop(0, 'rgba(100, 181, 246, 0.4)');
+            gradient.addColorStop(1, 'rgba(100, 181, 246, 0.0)');
+        } else {
+            gradient.addColorStop(0, 'rgba(13, 71, 161, 0.25)');
+            gradient.addColorStop(1, 'rgba(13, 71, 161, 0.0)');
+        }
+
     homeChartInstance = new Chart(context, {
-        type: 'bar',
+            type: 'line',
         data: {
             labels,
             datasets: [{
                 data: values,
-                backgroundColor: data.map((d,i) => {
-                    const isLast = i === data.length-1;
-                    return isLast
-                        ? (isDark ? '#64b5f6' : '#0D47A1')
-                        : (isDark ? 'rgba(100,181,246,0.3)' : 'rgba(13,71,161,0.22)');
-                }),
-                borderRadius: period === 'month' ? 2 : 5,
-                borderSkipped: false,
-                barPercentage: period === 'month' ? 0.9 : 0.65,
-                minBarLength: 6,
+                    borderColor: isDark ? '#64b5f6' : '#0D47A1',
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    pointBackgroundColor: isDark ? '#1a1a1a' : '#ffffff',
+                    pointBorderColor: isDark ? '#64b5f6' : '#0D47A1',
+                    pointBorderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    fill: true,
+                    tension: 0.4
             }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             animation: { duration: 600, easing: 'easeOutQuart' },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -3144,7 +3160,7 @@ function setHomeChart(period) {
                 }
             },
             scales: {
-                y: { display: false, beginAtZero: true, grid: { display: false } },
+                    y: { display: false, beginAtZero: true, suggestedMax: maxVal * 1.2 },
                 x: {
                     grid: { display: false },
                     ticks: {
@@ -3170,10 +3186,10 @@ function renderChartSummary(period, values, data) {
     const maxLabel = max > 0 ? (data[values.indexOf(max)]?.label || '—') : '—';
     const periodLabels = { week: 'Semana', month: 'Mês', year: 'Ano' };
     sum.innerHTML = `
-        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label">${periodLabels[period]}</div><div class="c-sum-val" data-full-value="${formatBRL(total)}">${formatK(total)}</div></div>
-        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label">Média</div><div class="c-sum-val" data-full-value="${formatBRL(avg)}">${formatK(avg)}</div></div>
-        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label">Melhor</div><div class="c-sum-val" style="color:var(--success)" data-full-value="${formatBRL(max)}">${formatK(max)}</div></div>
-        <div class="c-sum-item"><div class="c-sum-label">Pico</div><div class="c-sum-val">${maxLabel}</div></div>`;
+        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label"><i class="fa-solid fa-calendar-day"></i> ${periodLabels[period]}</div><div class="c-sum-val" data-full-value="${formatBRL(total)}">${formatK(total)}</div></div>
+        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label"><i class="fa-solid fa-chart-line"></i> Média</div><div class="c-sum-val" data-full-value="${formatBRL(avg)}">${formatK(avg)}</div></div>
+        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label"><i class="fa-solid fa-arrow-up-right-dots"></i> Melhor</div><div class="c-sum-val" style="color:var(--success)" data-full-value="${formatBRL(max)}">${formatK(max)}</div></div>
+        <div class="c-sum-item"><div class="c-sum-label"><i class="fa-solid fa-fire"></i> Pico</div><div class="c-sum-val">${maxLabel}</div></div>`;
 }
 
 /* ============================================================
@@ -3206,20 +3222,32 @@ function dismissUrgentPopup() {
 function checkAndShowPendingAlerts(docs) {
     try {
         const seen = JSON.parse(localStorage.getItem('seenAlerts') || '[]');
+        const now = new Date();
         for (const d of docs) {
             if (d.type === 'alert' && d._id && !seen.includes(d._id)) {
-                const desc = d.description || '';
-                const colonIdx = desc.indexOf(':');
-                let title, text;
-                if (colonIdx > 0) {
-                    title = desc.substring(0, colonIdx).replace('⚠️ ', '').trim();
-                    text = desc.substring(colonIdx + 1).trim();
+                const alertDate = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : new Date();
+                const diffHours = (now - alertDate) / (1000 * 60 * 60);
+
+                // Só exibe popup para alertas criados nas últimas 48 horas
+                if (diffHours <= 48) {
+                    const desc = d.description || '';
+                    const colonIdx = desc.indexOf(':');
+                    let title, text;
+                    if (colonIdx > 0) {
+                        title = desc.substring(0, colonIdx).replace('⚠️ ', '').trim();
+                        text = desc.substring(colonIdx + 1).trim();
+                    } else {
+                        title = desc.replace('⚠️ ', '').trim();
+                        text = '';
+                    }
+                    showUrgentPopup(d._id, title, text);
+                    break;
                 } else {
-                    title = desc.replace('⚠️ ', '').trim();
-                    text = '';
+                    // Se for antigo, marca como lido silenciosamente para não verificar novamente
+                    seen.push(d._id);
+                    if (seen.length > 50) seen.splice(0, seen.length - 50);
+                    localStorage.setItem('seenAlerts', JSON.stringify(seen));
                 }
-                showUrgentPopup(d._id, title, text);
-                break;
             }
         }
     } catch(e) {}
