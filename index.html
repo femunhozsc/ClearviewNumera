@@ -1597,13 +1597,22 @@
             <span class="sheet-title">Gerenciar Categoria</span>
             <button class="sheet-close" onclick="closeSheet('sheetCategoryManager')"><i class="fa-solid fa-xmark"></i></button>
         </div>
+        
+        <div style="display:flex;justify-content:center;margin-bottom:24px">
+            <div id="editCategoryAvatarPreview" style="width:80px;height:80px;border-radius:20px;background-color:var(--bg);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:var(--text-muted);cursor:pointer;position:relative;background-size:cover;background-position:center;" onclick="document.getElementById('categoryPhotoInput').click()">
+                <i class="fa-solid fa-camera"></i>
+                <div style="position:absolute;bottom:-4px;right:-4px;background:var(--accent);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;border:2px solid var(--card-bg)"><i class="fa-solid fa-plus"></i></div>
+            </div>
+            <input type="file" id="categoryPhotoInput" accept="image/*" style="display:none" onchange="handleCategoryAvatarSelection(this)">
+        </div>
+
         <input type="hidden" id="manageCatId">
         <div class="form-field">
             <label class="form-label">Nome da Categoria</label>
-            <input type="text" id="manageCatName" class="form-input">
+            <input type="text" id="manageCatName" class="form-input" placeholder="Ex: Eletrônicos, Hidráulica...">
         </div>
-        <button class="btn-primary" onclick="saveCategoryRename()">Salvar Alteração</button>
-        <button class="btn-danger" onclick="deleteCategoryAction()" style="margin-top:12px">
+        <button class="btn-primary" id="btnSaveCategory" onclick="saveCategory()">Salvar Categoria</button>
+        <button class="btn-danger" id="btnDeleteCategory" onclick="deleteCategoryAction()" style="margin-top:12px">
             <i class="fa-solid fa-trash-can"></i> Excluir Categoria
         </button>
     </div>
@@ -1680,7 +1689,7 @@
         <!-- Painel de Inteligência de Preços da Região -->
         <div id="priceIntelPanel" class="section-card" style="display:none; margin: 4px 0 12px;">
             <div class="section-card-title" style="margin-bottom: 12px;">
-                <span><i class="fa-solid fa-chart-simple"></i> Inteligência de Mercado</span>
+                <span><i class="fa-solid fa-brain" style="color:var(--accent)"></i> Clearview Intelligence</span>
                 <span id="priceIntelLoading" class="price-intel-loading" style="display:none"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
             </div>
             <div class="chart-toggle" style="margin-bottom: 12px; display:flex;">
@@ -3499,9 +3508,11 @@ async function loadSaleCategories() {
         const catSel = document.getElementById('customProductCat');
         catSel.innerHTML = '<option value="">Selecionar...</option>';
         grid.innerHTML = snap.docs.map(d => {
+            const data = d.data();
             catSel.innerHTML += `<option value="${d.id}">${d.data().name}</option>`;
+            const imgHtml = data.imageUrl ? `<div class="sale-cat-img" style="background-image:url('${data.imageUrl}')"></div>` : `<div class="sale-cat-img"><i class="fa-solid fa-tag"></i></div>`;
             return `<button class="sale-cat-btn" onclick="selectSaleCat('${d.id}','${d.data().name.replace(/'/g,"\\'")}')">
-                <i class="fa-solid fa-tag"></i> ${d.data().name}
+                ${imgHtml} <span>${data.name}</span>
             </button>`;
         }).join('');
     } catch(e) { grid.innerHTML = '<div style="grid-column:span 2;color:var(--danger);font-size:0.8rem;text-align:center">Erro ao carregar</div>'; }
@@ -3780,7 +3791,7 @@ async function loadCategoryScroll(containerId, onSelect) {
                 ${c.name} <span style="opacity:0.6;font-size:0.65rem;margin-left:4px">(${c.count})</span>
             </button>`;
         });
-        html += `<button class="cat-chip add-cat" onclick="promptNewCategory()">+ Nova</button>`;
+        html += `<button class="cat-chip add-cat" onclick="openCategoryManager()">+ Nova</button>`;
         container.innerHTML = html;
         // Auto-selecionar primeira
         if (categories.length > 0) {
@@ -3892,6 +3903,7 @@ async function deleteCategoryAction() {
         showToast('Categoria excluída', 'success');
         closeSheet('sheetCategoryManager');
         loadProductsTab();
+        loadStockTab();
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
 }
 
@@ -6926,12 +6938,15 @@ function renderPriceIntelligence() {
         if (!stats || stats.n === 0) return '';
         const lojas = stats.n === 1 ? '1 registro' : `${stats.n} registros`;
         return `<div class="price-intel-row">
-            <div class="price-intel-level"><span style="color:var(--text-main);font-weight:600">${itemName}</span> <span style="color:var(--text-muted)">(${lojas})</span></div>
+            <div class="price-intel-level">
+                <div style="color:var(--text-main);font-weight:600;font-size:0.9rem">${itemName}</div>
+                <div style="font-size:0.65rem; background:var(--card-bg); border:1px solid var(--card-border); padding:3px 8px; border-radius:12px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-store" style="margin-right:4px"></i>${lojas}</div>
+            </div>
             <div class="price-intel-stats">
-                <span class="pi-stat min">Mínimo <strong>${formatBRL(stats.min)}</strong></span>
-                <span class="pi-stat avg">Média <strong>${formatBRL(stats.avg)}</strong></span>
-                <span class="pi-stat max">Máximo <strong>${formatBRL(stats.max)}</strong></span>
-                ${stats.m ? `<span class="pi-stat margin">Margem Média <strong>${stats.m.toFixed(1)}%</strong></span>` : ''}
+                <div class="pi-stat min"><span><i class="fa-solid fa-arrow-down"></i> Mín</span> <strong>${formatBRL(stats.min)}</strong></div>
+                <div class="pi-stat avg"><span><i class="fa-solid fa-bullseye"></i> Méd</span> <strong>${formatBRL(stats.avg)}</strong></div>
+                <div class="pi-stat max"><span><i class="fa-solid fa-arrow-up"></i> Máx</span> <strong>${formatBRL(stats.max)}</strong></div>
+                ${stats.m ? `<div class="pi-stat margin"><span><i class="fa-solid fa-percent"></i> Margem Média</span> <strong>${stats.m.toFixed(1)}%</strong></div>` : ''}
             </div>
         </div>`;
     };
@@ -7349,11 +7364,14 @@ function openNewOSSheet() {
     const grid = document.getElementById('osCatGrid');
     grid.innerHTML = '<div class="loading-state" style="grid-column:span 2"><div class="loading-spinner"></div></div>';
     db.collection('groups').doc(currentGroupId).collection('categories').get().then(snap => {
-        grid.innerHTML = snap.docs.map(d => `
-            <button class="sale-cat-btn" onclick="selectOSCat('${d.id}','${d.data().name.replace(/'/g,"\\'")}')">
-                <i class="fa-solid fa-screwdriver-wrench"></i> ${d.data().name}
+        grid.innerHTML = snap.docs.map(d => {
+            const data = d.data();
+            const imgHtml = data.imageUrl ? `<div class="sale-cat-img" style="background-image:url('${data.imageUrl}')"></div>` : `<div class="sale-cat-img"><i class="fa-solid fa-screwdriver-wrench"></i></div>`;
+            return `<button class="sale-cat-btn" onclick="selectOSCat('${d.id}','${data.name.replace(/'/g,"\\'")}')">
+                ${imgHtml} <span>${data.name}</span>
             </button>
-        `).join('') || '<div style="grid-column:span 2;text-align:center;color:var(--text-muted);font-size:0.8rem;padding:20px">Nenhuma categoria de serviço encontrada</div>';
+            `;
+        }).join('') || '<div style="grid-column:span 2;text-align:center;color:var(--text-muted);font-size:0.8rem;padding:20px">Nenhuma categoria de serviço encontrada</div>';
     });
     goOSStep(1);
     openSheet('sheetNewOS');
