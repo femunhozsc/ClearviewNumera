@@ -492,8 +492,8 @@ body::-webkit-scrollbar { display:none; }
 }
 .tab-page { display:none; }
 .tab-page.active { display:block; animation:tabIn 0.3s cubic-bezier(0.16,1,0.3,1); }
-@keyframes tabIn { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
-.page-inner { padding:20px; max-width:580px; margin:0 auto; }
+@keyframes tabIn { from{opacity:0;transform:translateY(12px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);} }
+.page-inner { padding:16px 8px; max-width:580px; margin:0 auto; }
 
 /* BOTTOM NAV */
 .bottom-nav {
@@ -569,11 +569,11 @@ body.dark-mode .home-greeting-name { background:linear-gradient(135deg,#f0f0f0,#
 /* Modular Stats Grid */
 .stats-grid {
     display:grid; grid-template-columns:repeat(2, 1fr);
-    gap:10px; margin-bottom:24px;
+    gap:8px; margin-bottom:24px;
 }
 .stat-box {
     background:var(--card-bg); border:1px solid var(--card-border);
-    border-radius:20px; padding:18px;
+    border-radius:20px; padding:14px 16px;
     display:flex; flex-direction:column; justify-content:center;
 }
 .stat-box-label {
@@ -604,7 +604,7 @@ body.dark-mode .home-greeting-name { background:linear-gradient(135deg,#f0f0f0,#
 /* Chart Section */
 .chart-section {
     background:var(--card-bg); border:1px solid var(--card-border);
-    border-radius:24px; padding:20px; margin-bottom:24px;
+    border-radius:24px; padding:16px; margin-bottom:24px;
     box-shadow:0 8px 24px rgba(0,0,0,0.03);
     transition:box-shadow 0.2s;
 }
@@ -639,7 +639,7 @@ body.dark-mode .chart-section { box-shadow:0 8px 24px rgba(0,0,0,0.2); }
 .chart-empty-msg i { font-size:1.5rem; opacity:0.3; }
 .chart-summary {
     display:grid; grid-template-columns:repeat(2, 1fr);
-    gap:10px; margin-top:20px; padding-top:0;
+    gap:8px; margin-top:16px; padding-top:0;
     border-top:none;
 }
 .c-sum-item {
@@ -1862,6 +1862,44 @@ body.dark-mode .quick-action-btn i { box-shadow:0 4px 15px rgba(0,0,0,0.2); }
 #page-mysales .section-label {
     margin-top: 20px;
 }
+
+/* ============================================================
+   MODERN DASHBOARDS (MEU DIA / MEU ANO)
+============================================================ */
+.hero-dash-card {
+    background: linear-gradient(135deg, var(--accent) 0%, #1565C0 100%);
+    color: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(13, 71, 161, 0.2);
+}
+.hero-dash-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; margin-bottom: 8px; font-weight:600; }
+.hero-dash-value { font-size: 2.3rem; font-weight: 800; line-height: 1; margin-bottom: 6px; letter-spacing: -1px; }
+.hero-dash-sub { font-size: 0.85rem; opacity: 0.9; }
+
+.dash-kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.dash-kpi-card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 18px; padding: 16px;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.dk-icon { width: 34px; height: 34px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 4px; }
+.dk-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+.dk-val { font-size: 1.1rem; font-weight: 800; color: var(--text-main); }
+.dk-sub { font-size: 0.7rem; color: var(--text-sec); font-weight: 500; }
+
+/* Cascade Animations for modern feel */
+.animate-cascade > * { opacity: 0; transform: translateY(20px); animation: cascadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-cascade > *:nth-child(1) { animation-delay: 0.05s; }
+.animate-cascade > *:nth-child(2) { animation-delay: 0.15s; }
+.animate-cascade > *:nth-child(3) { animation-delay: 0.25s; }
+.animate-cascade > *:nth-child(4) { animation-delay: 0.35s; }
+.animate-cascade > *:nth-child(5) { animation-delay: 0.45s; }
+@keyframes cascadeUp { to { opacity: 1; transform: translateY(0); } }
 
 /* ============================================================
    📢 ATUALIZAÇÕES (Updates)

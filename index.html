@@ -368,11 +368,11 @@
 
                 <!-- Stats Modulares -->
                 <div class="stats-grid stats-grid-2col" style="margin-bottom:10px">
-                    <div class="stat-box highlight-blue" onclick="openMySalesDashboard()" style="cursor:pointer">
+                    <div class="stat-box highlight-blue" onclick="openMyDayDashboard()" style="cursor:pointer">
                         <div class="stat-box-label"><i class="fa-solid fa-user"></i> Minhas Hoje</div>
                         <div class="stat-box-value" id="myDaySales">R$ 0,00</div>
                     </div>
-                    <div class="stat-box highlight">
+                    <div class="stat-box highlight" onclick="openMyYearDashboard()" style="cursor:pointer">
                         <div class="stat-box-label"><i class="fa-solid fa-calendar-check"></i> Meu Ano</div>
                         <div class="stat-box-value" id="myYearSales">R$ 0,00</div>
                     </div>
@@ -953,6 +953,26 @@
         <div class="section-label">Histórico de Vendas</div>
         <div class="feed-list" id="dashMyHistory"></div>
     </div>
+</div>
+
+<!-- ============================= PAGE: MEU DIA ============================= -->
+<div id="page-myday" class="page-slide">
+    <div class="page-slide-header">
+        <button class="page-slide-back" onclick="closeMyDayDashboard()"><i class="fa-solid fa-arrow-left"></i></button>
+        <span class="page-slide-title">Desempenho de Hoje</span>
+        <div style="width:40px"></div>
+    </div>
+    <div class="page-slide-body animate-cascade" id="myDayBody"></div>
+</div>
+
+<!-- ============================= PAGE: MEU ANO ============================= -->
+<div id="page-myyear" class="page-slide">
+    <div class="page-slide-header">
+        <button class="page-slide-back" onclick="closeMyYearDashboard()"><i class="fa-solid fa-arrow-left"></i></button>
+        <span class="page-slide-title">Resumo Anual</span>
+        <div style="width:40px"></div>
+    </div>
+    <div class="page-slide-body animate-cascade" id="myYearBody"></div>
 </div>
 
 <!-- ============================= SHEET: REGISTRAR ============================= -->
@@ -3186,9 +3206,9 @@ function renderChartSummary(period, values, data) {
     const maxLabel = max > 0 ? (data[values.indexOf(max)]?.label || '—') : '—';
     const periodLabels = { week: 'Semana', month: 'Mês', year: 'Ano' };
     sum.innerHTML = `
-        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label"><i class="fa-solid fa-calendar-day"></i> ${periodLabels[period]}</div><div class="c-sum-val" data-full-value="${formatBRL(total)}">${formatK(total)}</div></div>
-        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label"><i class="fa-solid fa-chart-line"></i> Média</div><div class="c-sum-val" data-full-value="${formatBRL(avg)}">${formatK(avg)}</div></div>
-        <div class="c-sum-item" onclick="showValueToast(this.querySelector('.c-sum-val'))"><div class="c-sum-label"><i class="fa-solid fa-arrow-up-right-dots"></i> Melhor</div><div class="c-sum-val" style="color:var(--success)" data-full-value="${formatBRL(max)}">${formatK(max)}</div></div>
+        <div class="c-sum-item"><div class="c-sum-label"><i class="fa-solid fa-calendar-day"></i> ${periodLabels[period]}</div><div class="c-sum-val">${formatBRL(total)}</div></div>
+        <div class="c-sum-item"><div class="c-sum-label"><i class="fa-solid fa-chart-line"></i> Média</div><div class="c-sum-val">${formatBRL(avg)}</div></div>
+        <div class="c-sum-item"><div class="c-sum-label"><i class="fa-solid fa-arrow-up-right-dots"></i> Melhor</div><div class="c-sum-val" style="color:var(--success)">${formatBRL(max)}</div></div>
         <div class="c-sum-item"><div class="c-sum-label"><i class="fa-solid fa-fire"></i> Pico</div><div class="c-sum-val">${maxLabel}</div></div>`;
 }
 
@@ -3295,6 +3315,160 @@ async function addToFeed(type, description, extra = {}) {
 }
 
 /* ============================================================
+   MODERN DASHBOARDS (MEU DIA E MEU ANO)
+============================================================ */
+let myDayChartInst = null;
+let myYearChartInst = null;
+
+function openMyDayDashboard() {
+    document.getElementById('page-myday').classList.add('active');
+    loadMyDayData();
+}
+function closeMyDayDashboard() { document.getElementById('page-myday').classList.remove('active'); }
+
+function openMyYearDashboard() {
+    document.getElementById('page-myyear').classList.add('active');
+    loadMyYearData();
+}
+function closeMyYearDashboard() { document.getElementById('page-myyear').classList.remove('active'); }
+
+async function loadMyDayData() {
+    const body = document.getElementById('myDayBody');
+    body.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando hoje...</div>';
+    
+    try {
+        const start = new Date(appDate); start.setHours(0,0,0,0);
+        const end = new Date(appDate); end.setHours(23,59,59,999);
+        
+        let sales = [];
+        if (_homeDataCache) {
+            sales = _homeDataCache.filter(s => s.sellerId === currentUser.uid && 
+                (s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt)) >= start &&
+                (s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt)) <= end
+            );
+        } else {
+            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+                .where('sellerId', '==', currentUser.uid).where('createdAt', '>=', start).where('createdAt', '<=', end).get();
+            sales = snap.docs.map(d => d.data());
+        }
+
+        const total = sales.reduce((a,s) => a + (s.total||0), 0);
+        const count = sales.length;
+        const avg = count > 0 ? total / count : 0;
+        
+        const hourly = new Array(24).fill(0);
+        const productCounts = {};
+
+        sales.forEach(s => {
+            const d = s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+            hourly[d.getHours()] += (s.total||0);
+            if (s.items) s.items.forEach(i => { productCounts[i.productName] = (productCounts[i.productName] || 0) + i.qty; });
+        });
+
+        let bestHour = -1, bestHourVal = -1;
+        hourly.forEach((v, i) => { if(v > bestHourVal) { bestHourVal = v; bestHour = i; } });
+        
+        const sortedProds = Object.entries(productCounts).sort((a,b)=>b[1]-a[1]);
+        const topProd = sortedProds.length > 0 ? sortedProds[0][0] : 'Nenhum item vendido';
+
+        body.innerHTML = `
+            <div class="hero-dash-card">
+                <div class="hero-dash-label">Total Vendido Hoje</div>
+                <div class="hero-dash-value">${formatBRL(total)}</div>
+                <div class="hero-dash-sub">${count} vendas realizadas</div>
+            </div>
+            <div class="dash-kpi-grid">
+                <div class="dash-kpi-card">
+                    <div class="dk-icon" style="background:rgba(13,71,161,0.1);color:var(--accent)"><i class="fa-solid fa-receipt"></i></div>
+                    <div class="dk-label">Ticket Médio</div>
+                    <div class="dk-val">${formatBRL(avg)}</div>
+                </div>
+                <div class="dash-kpi-card">
+                    <div class="dk-icon" style="background:rgba(241,196,15,0.1);color:#f1c40f"><i class="fa-solid fa-clock"></i></div>
+                    <div class="dk-label">Melhor Horário</div>
+                    <div class="dk-val">${bestHour >= 0 && bestHourVal > 0 ? bestHour+'h00' : '--'}</div>
+                    <div class="dk-sub">${bestHourVal > 0 ? formatBRL(bestHourVal) : ''}</div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-card-title"><i class="fa-solid fa-trophy" style="color:var(--accent)"></i> Campeão de Hoje</div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--text-main)">${topProd}</div>
+                ${sortedProds.length > 0 ? `<div style="font-size:0.75rem;color:var(--text-sec);margin-top:2px">${sortedProds[0][1]} unidades vendidas</div>` : ''}
+            </div>
+            <div class="section-card">
+                <div class="section-card-title">Vendas por Horário</div>
+                <div style="height:160px; position:relative; width:100%"><canvas id="myDayChart"></canvas></div>
+            </div>
+        `;
+        
+        setTimeout(() => {
+            const ctx = document.getElementById('myDayChart').getContext('2d');
+            if(myDayChartInst) myDayChartInst.destroy();
+            const isDark = document.body.classList.contains('dark-mode');
+            myDayChartInst = new Chart(ctx, {
+                type: 'line', data: { labels: Array.from({length:24}, (_,i) => i+'h'), datasets: [{ data: hourly, borderColor: isDark ? '#64b5f6' : '#0D47A1', backgroundColor: isDark ? 'rgba(100,181,246,0.15)' : 'rgba(13,71,161,0.15)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: {callbacks: {label: ctx => ' '+formatBRL(ctx.raw)}} }, scales: { x: { grid: {display:false}, ticks: {color: isDark?'#666':'#999', maxTicksLimit: 8} }, y: { display: false, beginAtZero: true } } }
+            });
+        }, 100);
+    } catch(e) { body.innerHTML = `<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>Erro: ${e.message}</div>`; }
+}
+
+async function loadMyYearData() {
+    const body = document.getElementById('myYearBody');
+    body.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando o ano...</div>';
+    try {
+        const currentYear = appDate.getFullYear();
+        const start = new Date(currentYear, 0, 1);
+        const end = new Date(currentYear, 11, 31, 23, 59, 59);
+        
+        const snap = await db.collection('groups').doc(currentGroupId).collection('sales').where('sellerId', '==', currentUser.uid).where('createdAt', '>=', start).where('createdAt', '<=', end).get();
+        const sales = snap.docs.map(d => d.data());
+        
+        const total = sales.reduce((a,s) => a + (s.total||0), 0);
+        const monthly = new Array(12).fill(0);
+        const productCounts = {};
+
+        sales.forEach(s => {
+            const d = s.createdAt.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+            monthly[d.getMonth()] += (s.total||0);
+            if (s.items) s.items.forEach(i => { productCounts[i.productName] = (productCounts[i.productName] || 0) + i.qty; });
+        });
+
+        const monthsActive = new Date().getFullYear() === currentYear ? new Date().getMonth() + 1 : 12;
+        const avgMonth = total / (monthsActive || 1);
+        let bestMonth = -1, bestMonthVal = -1, worstMonth = -1, worstMonthVal = Infinity;
+        monthly.forEach((v, i) => { 
+            if (i < monthsActive) {
+                if(v > bestMonthVal) { bestMonthVal = v; bestMonth = i; }
+                if(v < worstMonthVal) { worstMonthVal = v; worstMonth = i; }
+            }
+        });
+        if (worstMonthVal === Infinity) worstMonthVal = 0;
+
+        const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const sortedProds = Object.entries(productCounts).sort((a,b)=>b[1]-a[1]);
+        
+        body.innerHTML = `
+            <div class="hero-dash-card" style="background: linear-gradient(135deg, #1e8e3e 0%, #0d652d 100%);">
+                <div class="hero-dash-label">Acumulado ${currentYear}</div>
+                <div class="hero-dash-value">${formatBRL(total)}</div>
+                <div class="hero-dash-sub">Média de ${formatBRL(avgMonth)} / mês</div>
+            </div>
+            <div class="dash-kpi-grid">
+                <div class="dash-kpi-card"><div class="dk-icon" style="background:rgba(30,142,62,0.1);color:var(--success)"><i class="fa-solid fa-arrow-trend-up"></i></div><div class="dk-label">Mês Recorde</div><div class="dk-val">${bestMonth >= 0 ? monthNames[bestMonth] : '--'}</div><div class="dk-sub">${bestMonthVal >= 0 ? formatBRL(bestMonthVal) : ''}</div></div>
+                <div class="dash-kpi-card"><div class="dk-icon" style="background:rgba(217,48,37,0.1);color:var(--danger)"><i class="fa-solid fa-arrow-trend-down"></i></div><div class="dk-label">Pior Mês</div><div class="dk-val">${worstMonth >= 0 ? monthNames[worstMonth] : '--'}</div><div class="dk-sub">${worstMonthVal >= 0 ? formatBRL(worstMonthVal) : ''}</div></div>
+            </div>
+            <div class="dash-kpi-grid">
+                <div class="dash-kpi-card" style="grid-column:span 2"><div class="dk-label" style="margin-bottom:8px">Top Produtos Anual</div><div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--card-border); padding-bottom:8px; margin-bottom:8px;"><div><div style="font-size:0.7rem; color:var(--text-muted)"><i class="fa-solid fa-crown" style="color:#f1c40f"></i> Mais Vendido</div><div style="font-weight:700; font-size:0.9rem">${sortedProds.length > 0 ? sortedProds[0][0] : 'Nenhum'}</div></div><div style="font-weight:700; color:var(--success)">${sortedProds.length > 0 ? sortedProds[0][1] + ' un' : ''}</div></div><div style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:0.7rem; color:var(--text-muted)"><i class="fa-solid fa-arrow-down" style="color:var(--danger)"></i> Menos Vendido</div><div style="font-weight:700; font-size:0.9rem">${sortedProds.length > 0 ? sortedProds[sortedProds.length-1][0] : 'Nenhum'}</div></div><div style="font-weight:700; color:var(--text-muted)">${sortedProds.length > 0 ? sortedProds[sortedProds.length-1][1] + ' un' : ''}</div></div></div>
+            </div>
+            <div class="section-card"><div class="section-card-title">Evolução de Faturamento</div><div style="height:180px; position:relative; width:100%"><canvas id="myYearChart"></canvas></div></div>
+        `;
+        
+        setTimeout(() => { const ctx = document.getElementById('myYearChart').getContext('2d'); if(myYearChartInst) myYearChartInst.destroy(); const isDark = document.body.classList.contains('dark-mode'); myYearChartInst = new Chart(ctx, { type: 'bar', data: { labels: monthNames, datasets: [{ data: monthly, backgroundColor: monthly.map((v, i) => i === bestMonth ? '#1e8e3e' : (isDark ? '#64b5f6' : '#0D47A1')), borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: {callbacks: {label: ctx => ' '+formatBRL(ctx.raw)}} }, scales: { x: { grid: {display:false}, ticks: {color: isDark?'#666':'#999', font: {size:10}} }, y: { display: false, beginAtZero: true } } } }); }, 100);
+    } catch(e) { body.innerHTML = `<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>Erro: ${e.message}</div>`; }
+}
+
+/* ============================================================
    MY SALES DASHBOARD
 ============================================================ */
 function openMySalesDashboard() {
@@ -3369,32 +3543,13 @@ async function loadMySalesData(start, end) {
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando dados...</div>';
     
     try {
-        let sales = [];
-        try {
-            // Tentativa 1: Busca otimizada (requer índice composto sellerId + createdAt)
-            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
-                .where('sellerId', '==', currentUser.uid)
-                .where('createdAt', '>=', start)
-                .where('createdAt', '<=', end)
-                .orderBy('createdAt', 'desc')
-                .get();
-            sales = snap.docs.map(d => d.data());
-        } catch (errIndex) {
-            console.warn("Índice não encontrado, usando fallback no cliente...", errIndex);
-            // Tentativa 2: Fallback (sem índice composto)
-            // Busca vendas do usuário (limite seguro) e filtra no JS
-            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
-                .where('sellerId', '==', currentUser.uid)
-                .limit(1000)
-                .get();
-            
-            sales = snap.docs.map(d => d.data())
-                .filter(s => {
-                    const d = s.createdAt.toDate();
-                    return d >= start && d <= end;
-                })
-                .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
-        }
+        const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+            .where('sellerId', '==', currentUser.uid)
+            .where('createdAt', '>=', start)
+            .where('createdAt', '<=', end)
+            .orderBy('createdAt', 'desc')
+            .get();
+        const sales = snap.docs.map(d => d.data());
         
         // Totais
         const totalVal = sales.reduce((a, s) => a + (s.total || 0), 0);
@@ -5529,25 +5684,13 @@ async function loadMemberDashboardData(start, end) {
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div> Carregando dados...</div>';
     
     try {
-        let sales = [];
-        try {
-            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
-                .where('sellerId', '==', viewingMemberData.id)
-                .where('createdAt', '>=', start)
-                .where('createdAt', '<=', end)
-                .orderBy('createdAt', 'desc')
-                .get();
-            sales = snap.docs.map(d => d.data());
-        } catch (err) {
-            console.warn("Fallback member dash:", err);
-            const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
-                .where('sellerId', '==', viewingMemberData.id)
-                .limit(500).get();
-            sales = snap.docs.map(d => d.data()).filter(s => {
-                const d = s.createdAt.toDate();
-                return d >= start && d <= end;
-            }).sort((a,b) => b.createdAt.toDate() - a.createdAt.toDate());
-        }
+        const snap = await db.collection('groups').doc(currentGroupId).collection('sales')
+            .where('sellerId', '==', viewingMemberData.id)
+            .where('createdAt', '>=', start)
+            .where('createdAt', '<=', end)
+            .orderBy('createdAt', 'desc')
+            .get();
+        const sales = snap.docs.map(d => d.data());
         
         // Totais
         const totalVal = sales.reduce((a, s) => a + (s.total || 0), 0);
@@ -6720,27 +6863,27 @@ function closeSuggestions(id) {
 
 function onBrandInput(val) {
     clearTimeout(brandSearchTimeout);
-    if (val.length < 2) { closeSuggestions('brandSuggestions'); return; }
-    brandSearchTimeout = setTimeout(() => searchGlobalBrands(val), 350);
+    if (val.trim().length < 1) { closeSuggestions('brandSuggestions'); return; }
+    brandSearchTimeout = setTimeout(() => searchGlobalBrands(val), 80);
 }
 
 function onProductNameInput(val) {
     clearTimeout(productNameSearchTimeout);
-    if (val.length < 2) { closeSuggestions('productNameSuggestions'); return; }
-    productNameSearchTimeout = setTimeout(() => searchGlobalProducts(val), 350);
+    if (val.trim().length < 1) { closeSuggestions('productNameSuggestions'); return; }
+    productNameSearchTimeout = setTimeout(() => searchGlobalProducts(val), 80);
     clearTimeout(priceIntelTimeout);
-    priceIntelTimeout = setTimeout(() => loadPriceIntelligence(val), 800);
+    priceIntelTimeout = setTimeout(() => loadPriceIntelligence(val), 600);
 }
 
 function onModelInput(val) {
     clearTimeout(modelSearchTimeout);
-    if (val.length < 1) { closeSuggestions('modelSuggestions'); return; }
-    modelSearchTimeout = setTimeout(() => searchGlobalModels(val), 350);
+    if (val.trim().length < 1) { closeSuggestions('modelSuggestions'); return; }
+    modelSearchTimeout = setTimeout(() => searchGlobalModels(val), 80);
 }
 
 function onSalePriceChange() {
     const name = document.getElementById('addProductName')?.value.trim();
-    if (name && name.length >= 2) {
+    if (name && name.length >= 1) {
         clearTimeout(priceIntelTimeout);
         priceIntelTimeout = setTimeout(() => loadPriceIntelligence(name), 600);
     }
@@ -6881,7 +7024,7 @@ async function loadPriceIntelligence(productName) {
     if (!panel || !body) return;
 
     const q = productName.toLowerCase().trim();
-    if (q.length < 2) { panel.style.display = 'none'; return; }
+    if (q.length < 1) { panel.style.display = 'none'; return; }
 
     const model      = (document.getElementById('addProductModel')?.value || '').toLowerCase().trim();
     const variantKey = model ? `${q} ${model}` : q;
@@ -6962,13 +7105,23 @@ function renderPriceIntelligence() {
         return null;
     };
 
-    const renderRow = (itemName, stats) => {
+    const renderRow = (item, stats) => {
         if (!stats || stats.n === 0) return '';
         const lojas = stats.n === 1 ? '1 registro' : `${stats.n} registros`;
+        
+        const details = [];
+        if (item.model) details.push(item.model);
+        if (item.color) details.push(item.color);
+        if (item.size) details.push(item.size);
+        const detailsHtml = details.length > 0 ? `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:3px;">${details.join(' • ')}</div>` : '';
+
         return `<div class="price-intel-row">
-            <div class="price-intel-level">
-                <div style="color:var(--text-main);font-weight:600;font-size:0.9rem">${itemName}</div>
-                <div style="font-size:0.65rem; background:var(--card-bg); border:1px solid var(--card-border); padding:4px 10px; border-radius:20px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-store" style="margin-right:4px"></i>${lojas}</div>
+            <div class="price-intel-level" style="align-items:flex-start">
+                <div>
+                    <div style="color:var(--text-main);font-weight:600;font-size:0.9rem">${item.name}</div>
+                    ${detailsHtml}
+                </div>
+                <div style="font-size:0.65rem; background:var(--card-bg); border:1px solid var(--card-border); padding:4px 10px; border-radius:20px; color:var(--text-muted); font-weight:600; margin-top:2px;"><i class="fa-solid fa-store" style="margin-right:4px"></i>${lojas}</div>
             </div>
             <div class="price-intel-stats">
                 <div class="pi-stat avg">
@@ -6991,7 +7144,7 @@ function renderPriceIntelligence() {
     if (currentIntelData) {
         const stats = getStatsForLevel(currentIntelData);
         if (stats && stats.n > 0) {
-            html += renderRow(currentIntelData.name, stats);
+            html += renderRow(currentIntelData, stats);
         } else {
             html += `<div style="font-size:0.75rem;color:var(--text-muted);padding:10px 0;text-align:center;">Nenhum registro encontrado em <strong>${levelLabels[currentIntelLevel]}</strong> para este produto exato.</div>`;
         }
@@ -7003,7 +7156,7 @@ function renderPriceIntelligence() {
             const stats = getStatsForLevel(item);
             if (stats && stats.n > 0) {
                 foundAny = true;
-                similarHtml += renderRow(item.name, stats);
+                similarHtml += renderRow(item, stats);
             }
         });
 
@@ -7060,7 +7213,7 @@ async function syncToGlobalDB(productName, brand, model, salePrice, costPrice, p
 
     // Sincronizar marca (coleção separada simples)
     const brandLower = (brand || '').toLowerCase().trim();
-    if (brandLower.length > 1) {
+    if (brandLower.length > 0) {
         db.collection('globalData').doc(loc.country).collection('brands').doc(brandLower)
             .set({ name: brand, nameLower: brandLower, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
             .catch(() => {});
@@ -7094,6 +7247,8 @@ async function syncToGlobalDB(productName, brand, model, salePrice, costPrice, p
                 nameLower: variantKey,
                 brand: brand || '',
                 model: model || '',
+                color: currentData.color || '',
+                size: currentData.size || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
@@ -8148,28 +8303,13 @@ async function loadFuelHistory(resetLimit = false) {
     btnMore.style.display = 'none';
     
     try {
-        let docs = [];
-        try {
-            let query = db.collection('groups').doc(currentGroupId).collection('fuel');
-            if (activeVehicleId) query = query.where('vehicleId', '==', activeVehicleId);
-            if (fuelFilterStartDate) query = query.where('date', '>=', fuelFilterStartDate);
-            if (fuelFilterEndDate) query = query.where('date', '<=', fuelFilterEndDate);
-            query = query.orderBy('date', 'desc');
-            const snap = await query.limit(fuelHistoryLimit).get();
-            docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        } catch(errIndex) {
-            console.warn("Fallback query used due to index error:", errIndex);
-            // Fallback: Busca simples pelo veículo (sem ordenação no DB se falhar índice composto)
-            let fallbackRef = db.collection('groups').doc(currentGroupId).collection('fuel');
-            if (activeVehicleId) fallbackRef = fallbackRef.where('vehicleId', '==', activeVehicleId);
-            const snap = await fallbackRef.limit(100).get();
-            docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            // Filtros client-side
-            if (fuelFilterStartDate) docs = docs.filter(d => d.date.toDate() >= fuelFilterStartDate);
-            if (fuelFilterEndDate) docs = docs.filter(d => d.date.toDate() <= fuelFilterEndDate);
-            docs.sort((a,b) => b.date.toDate() - a.date.toDate());
-            if (docs.length > fuelHistoryLimit) docs = docs.slice(0, fuelHistoryLimit);
-        }
+        let query = db.collection('groups').doc(currentGroupId).collection('fuel');
+        if (activeVehicleId) query = query.where('vehicleId', '==', activeVehicleId);
+        if (fuelFilterStartDate) query = query.where('date', '>=', fuelFilterStartDate);
+        if (fuelFilterEndDate) query = query.where('date', '<=', fuelFilterEndDate);
+        query = query.orderBy('date', 'desc');
+        const snap = await query.limit(fuelHistoryLimit).get();
+        const docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
         
         docs.forEach(d => fuelHistoryCache[d.id] = d);
         const data = docs;
