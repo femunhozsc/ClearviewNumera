@@ -3434,7 +3434,14 @@ async function loadMyDayData() {
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: {callbacks: {label: ctx => ' '+formatBRL(ctx.raw)}} }, scales: { x: { grid: {display:false}, ticks: {color: isDark?'#666':'#999', maxTicksLimit: 8} }, y: { display: false, beginAtZero: true } } }
             });
         }, 100);
-    } catch(e) { body.innerHTML = `<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>Erro: ${e.message}</div>`; }
+    } catch(e) { 
+        let msg = e.message;
+        if (msg.includes('requires an index')) {
+            const link = msg.match(/https:\/\/[^\s]+/);
+            msg = `Índice pendente. <a href="${link ? link[0] : '#'}" target="_blank" style="color:var(--accent);font-weight:bold;">Clique aqui para criar no Firebase</a> e aguarde 5 min.`;
+        }
+        body.innerHTML = `<div class="feed-empty" style="padding:40px 20px"><i class="fa-solid fa-triangle-exclamation"></i><p>${msg}</p></div>`; 
+    }
 }
 
 async function loadMyYearData() {
@@ -3489,7 +3496,14 @@ async function loadMyYearData() {
         `;
         
         setTimeout(() => { const ctx = document.getElementById('myYearChart').getContext('2d'); if(myYearChartInst) myYearChartInst.destroy(); const isDark = document.body.classList.contains('dark-mode'); myYearChartInst = new Chart(ctx, { type: 'bar', data: { labels: monthNames, datasets: [{ data: monthly, backgroundColor: monthly.map((v, i) => i === bestMonth ? '#1e8e3e' : (isDark ? '#64b5f6' : '#0D47A1')), borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: {callbacks: {label: ctx => ' '+formatBRL(ctx.raw)}} }, scales: { x: { grid: {display:false}, ticks: {color: isDark?'#666':'#999', font: {size:10}} }, y: { display: false, beginAtZero: true } } } }); }, 100);
-    } catch(e) { body.innerHTML = `<div class="feed-empty"><i class="fa-solid fa-triangle-exclamation"></i>Erro: ${e.message}</div>`; }
+    } catch(e) { 
+        let msg = e.message;
+        if (msg.includes('requires an index')) {
+            const link = msg.match(/https:\/\/[^\s]+/);
+            msg = `Índice pendente. <a href="${link ? link[0] : '#'}" target="_blank" style="color:var(--accent);font-weight:bold;">Clique aqui para criar no Firebase</a> e aguarde 5 min.`;
+        }
+        body.innerHTML = `<div class="feed-empty" style="padding:40px 20px"><i class="fa-solid fa-triangle-exclamation"></i><p>${msg}</p></div>`; 
+    }
 }
 
 /* ============================================================
@@ -3627,7 +3641,12 @@ async function loadMySalesData(start, end) {
 
     } catch(e) {
         console.error(e);
-        list.innerHTML = '<div class="feed-empty">Erro ao carregar dados: ' + e.message + '</div>';
+        let msg = e.message;
+        if (msg.includes('requires an index')) {
+            const link = msg.match(/https:\/\/[^\s]+/);
+            msg = `Índice pendente. <br><a href="${link ? link[0] : '#'}" target="_blank" style="color:var(--accent);font-weight:bold;">Clique aqui para criar no Firebase</a> e aguarde 3-5 minutos.`;
+        }
+        list.innerHTML = `<div class="feed-empty" style="padding:40px 20px"><i class="fa-solid fa-triangle-exclamation"></i><p>${msg}</p></div>`;
     }
 }
 
@@ -5830,7 +5849,12 @@ async function loadMemberDashboardData(start, end) {
         }
     } catch(e) {
         console.error(e);
-        list.innerHTML = '<div class="feed-empty">Erro ao carregar dados: ' + e.message + '</div>';
+        let msg = e.message;
+        if (msg.includes('requires an index')) {
+            const link = msg.match(/https:\/\/[^\s]+/);
+            msg = `Índice pendente. <br><a href="${link ? link[0] : '#'}" target="_blank" style="color:var(--accent);font-weight:bold;">Clique aqui para criar no Firebase</a> e aguarde 3-5 minutos.`;
+        }
+        list.innerHTML = `<div class="feed-empty" style="padding:40px 20px"><i class="fa-solid fa-triangle-exclamation"></i><p>${msg}</p></div>`;
     }
 }
 
@@ -8452,7 +8476,12 @@ async function loadFuelHistory(resetLimit = false) {
         renderFuelChart(data);
     } catch(e) {
         console.error(e);
-        list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>Erro</h3><p>${e.message}</p></div>`;
+        let msg = e.message;
+        if (msg.includes('requires an index')) {
+            msg = `Estamos organizando os dados de combustível. Isso pode levar alguns minutos.`;
+        }
+        list.innerHTML = `<div class="empty-state" style="padding:20px"><i class="fa-solid fa-triangle-exclamation" style="color:var(--orange)"></i><h3 style="margin-top:10px">Otimização em andamento</h3><p style="margin-top:10px;line-height:1.5">${msg}</p></div>`;
+        if (statsContainer) statsContainer.innerHTML = '';
     }
 }
 
