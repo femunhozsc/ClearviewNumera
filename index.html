@@ -1707,6 +1707,17 @@
                 <input type="text" id="addProductCostPrice" class="form-input" placeholder="0,00" oninput="maskMoney(this)">
             </div>
         </div>
+        
+        <div class="form-field">
+            <label class="form-label">Código do Produto</label>
+            <input type="text" id="addProductCode" class="form-input" placeholder="Deixe em branco para auto-gerar">
+        </div>
+
+        <div class="form-field">
+            <label class="form-label"><i class="fa-regular fa-image" style="color:var(--accent);font-size:0.75rem"></i> Fotos do Produto (até 5)</label>
+            <div class="product-images-row" id="productImagesRow"></div>
+            <input type="file" id="productPhotoInput" accept="image/*" multiple style="display:none" onchange="handleProductPhotos(this)">
+        </div>
 
         <!-- Painel de Inteligência de Preços da Região -->
         <div id="priceIntelPanel" class="section-card" style="display:none; margin: 4px 0 12px;">
@@ -2107,6 +2118,15 @@
     </div>
 </div>
 
+<!-- ============================= GALERIA DE IMAGENS ============================= -->
+<div class="gallery-overlay" id="galleryOverlay">
+    <button class="gallery-close" onclick="closeGallery()"><i class="fa-solid fa-xmark"></i></button>
+    <button class="gallery-nav left" onclick="navGallery(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+    <img src="" class="gallery-img" id="galleryImg">
+    <button class="gallery-nav right" onclick="navGallery(1)"><i class="fa-solid fa-chevron-right"></i></button>
+    <div class="gallery-dots" id="galleryDots"></div>
+</div>
+
 <!-- CONFETTI -->
 <canvas id="confetti-canvas"></canvas>
 
@@ -2355,6 +2375,10 @@ let fuelHistoryLimit = 15;
 let fuelFilterStartDate = null, fuelFilterEndDate = null;
 let fuelHistoryCache = {};
 let fuelChartInstance = null;
+let productsListCache = {};
+let currentProductImages = [];
+let currentGalleryImages = [];
+let currentGalleryIndex = 0;
 
 /* ============================================================
    UTILS
@@ -4015,15 +4039,23 @@ async function loadProductsList(catId) {
         }
         // Ordena localmente para exibição
         const docs = snap.docs.sort((a, b) => (a.data().name || '').toString().localeCompare(b.data().name || ''));
+        productsListCache = {}; // Zera o cache
         list.innerHTML = headerHtml + '<div class="products-list">' + docs.map(d => {
             const p = d.data();
+            productsListCache[d.id] = p; // Guarda no cache para a galeria
             const showCost = canViewCost();
             const alertIcon = p.marketAlert && p.marketAlert.type === 'price_low' 
                 ? `<i class="fa-solid fa-triangle-exclamation" style="color:var(--orange);font-size:0.75rem;margin-left:6px" title="Preço muito abaixo da média de mercado"></i>` 
                 : '';
+            
+            const imgs = p.images || [];
+            const thumbHtml = imgs.length > 0
+                ? `<div class="product-thumb" style="background-image:url('${imgs[0]}')" onclick="event.stopPropagation(); openGalleryModal('${d.id}', 0)"></div>`
+                : `<div class="product-thumb" onclick="event.stopPropagation()"><i class="fa-solid fa-image"></i></div>`;
+            
             return `<div class="product-item" onclick="openProductDetail('${d.id}')">
-                <div>
-                    <div class="product-code-badge">${p.code || '—'}</div>
+                <div class="product-thumb-wrap">
+                    ${thumbHtml}
                 </div>
                 <div class="product-info">
                     <div class="product-name">${p.name}${alertIcon}</div>
@@ -4055,6 +4087,64 @@ async function promptNewCategory() {
         loadProductsTab();
         loadStockTab();
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ============================================================
+   IMAGE UPLOAD & GALLERY LOGIC
+============================================================ */
+function renderProductImagesForm() {
+    const row = document.getElementById('productImagesRow');
+    if (!row) return;
+    let html = '';
+    currentProductImages.forEach((img, i) => {
+        html += `<div class="img-preview-box" style="background-image:url('${img}')">
+                    <div class="img-remove-btn" onclick="removeProductImage(${i})"><i class="fa-solid fa-xmark"></i></div>
+                 </div>`;
+    });
+    if (currentProductImages.length < 5) {
+        html += `<div class="img-upload-box" onclick="document.getElementById('productPhotoInput').click()"><i class="fa-solid fa-plus"></i></div>`;
+    }
+    row.innerHTML = html;
+}
+function removeProductImage(index) {
+    currentProductImages.splice(index, 1);
+    renderProductImagesForm();
+}
+async function handleProductPhotos(input) {
+    if (!input.files || input.files.length === 0) return;
+    const remaining = 5 - currentProductImages.length;
+    const files = Array.from(input.files).slice(0, remaining);
+    if (input.files.length > remaining) showToast('Limite de 5 fotos atingido.', 'info');
+    showToast('Processando imagens...', 'info');
+    try {
+        // Comprime para 500px, 60% de qualidade para ficar ultra leve
+        const base64Arr = await Promise.all(files.map(f => compressImage(f, 500, 0.6)));
+        currentProductImages.push(...base64Arr);
+        renderProductImagesForm();
+    } catch(e) { showToast('Erro ao processar imagem', 'error'); }
+    input.value = '';
+}
+
+function openGalleryModal(productId, index = 0) {
+    const p = productsListCache[productId];
+    if (!p || !p.images || p.images.length === 0) return;
+    currentGalleryImages = p.images;
+    currentGalleryIndex = index;
+    updateGalleryUI();
+    document.getElementById('galleryOverlay').classList.add('active');
+}
+function closeGallery() { document.getElementById('galleryOverlay').classList.remove('active'); }
+function navGallery(dir) {
+    currentGalleryIndex += dir;
+    if (currentGalleryIndex < 0) currentGalleryIndex = currentGalleryImages.length - 1;
+    if (currentGalleryIndex >= currentGalleryImages.length) currentGalleryIndex = 0;
+    updateGalleryUI();
+}
+function updateGalleryUI() {
+    document.getElementById('galleryImg').src = currentGalleryImages[currentGalleryIndex];
+    document.getElementById('galleryDots').innerHTML = currentGalleryImages.map((_, i) => `<div class="gallery-dot ${i === currentGalleryIndex ? 'active' : ''}"></div>`).join('');
+    const navs = document.querySelectorAll('.gallery-nav');
+    navs.forEach(nav => nav.style.display = currentGalleryImages.length > 1 ? 'flex' : 'none');
 }
 
 /* ============================================================
@@ -4112,13 +4202,15 @@ function openAddProductSheet(targetCatId = null) {
 
     // Reset form
     ['addProductName','addProductBrand','addProductModel','addProductDesc'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-    ['addProductSalePrice','addProductCostPrice'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    ['addProductSalePrice','addProductCostPrice','addProductCode'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
     document.getElementById('editProductId').value = '';
     document.getElementById('editProductOriginalName').value = '';
     document.getElementById('editProductOriginalModel').value = '';
     document.getElementById('editProductOriginalBrand').value = '';
     document.getElementById('addProductColor').value = ''; document.getElementById('addProductSize').value = '';
     document.getElementById('addProductStock').value = '0';
+    currentProductImages = [];
+    renderProductImagesForm();
     const btnDel = document.getElementById('btnDeleteProduct');
     if(btnDel) btnDel.style.display = 'none';
     document.getElementById('newCatField').style.display = 'none';
@@ -4190,6 +4282,7 @@ async function saveProduct() {
     const desc = document.getElementById('addProductDesc').value.trim();
     const editId = document.getElementById('editProductId').value;
     const bizType = currentGroup?.bizType || 'varejo';
+    let code = document.getElementById('addProductCode').value.trim();
 
     if (!name || !catId) { showToast('Nome e categoria são obrigatórios', 'error'); return; }
     if (!salePrice) { showToast('Informe o preço de venda', 'error'); return; }
@@ -4222,11 +4315,19 @@ async function saveProduct() {
             catName = catDoc.data().name;
         }
 
+        if (!editId && !code) {
+            const groupDoc = await db.collection('groups').doc(currentGroupId).get();
+            const counter = (groupDoc.data().productCounter || 0) + 1;
+            await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
+            code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
+        }
+
         const productData = {
             name, brand: brand || '', categoryId: catId, categoryName: catName,
             nameLower: name.toLowerCase().trim(), // Índice de busca global
             salePrice, costPrice: finalCost, model, color, size, description: desc, unit,
             location: currentGroup.location || null,
+            images: currentProductImages, code,
             wholesaleTiers,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -4253,13 +4354,8 @@ async function saveProduct() {
             }
         } else {
             // CRIAR NOVO
-            const groupDoc = await db.collection('groups').doc(currentGroupId).get();
-            const counter = (groupDoc.data().productCounter || 0) + 1;
-            await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
-            const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
-            
             const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
-                ...productData, code, active: true,
+                ...productData, active: true,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 createdBy: currentUser.uid
             });
@@ -4353,7 +4449,11 @@ async function openProductDetail(productId) {
         document.getElementById('addProductSize').value = p.size || '';
         document.getElementById('addProductDesc').value = p.description || '';
         document.getElementById('addProductSalePrice').value = (p.salePrice || 0).toFixed(2).replace('.',',');
+        document.getElementById('addProductCode').value = p.code || '';
         
+        currentProductImages = p.images || [];
+        renderProductImagesForm();
+
         const costInput = document.getElementById('addProductCostPrice');
         if (canViewCost()) {
             costInput.value = (p.costPrice || 0).toFixed(2).replace('.',',');
