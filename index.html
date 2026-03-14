@@ -1195,6 +1195,7 @@
             <button class="sheet-close" onclick="closeSheet('sheetAddService')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <input type="hidden" id="editServiceId" value="">
+        <input type="hidden" id="editServiceOriginalName" value="">
         <div class="form-field">
             <label class="form-label">Categoria</label>
             <select id="addServiceCat" class="form-select" onchange="checkNewServiceCat(this)">
@@ -1206,9 +1207,11 @@
             <label class="form-label">Nome da nova categoria</label>
             <input type="text" id="newServiceCatName" class="form-input" placeholder="Ex: Elétrico, Mecânica, Transporte...">
         </div>
-        <div class="form-field">
+        <div class="form-field" style="position:relative">
             <label class="form-label">Nome do Serviço</label>
-            <input type="text" id="addServiceName" class="form-input" placeholder="Ex: Reboque, Instalação elétrica, Troca de óleo...">
+            <input type="text" id="addServiceName" class="form-input" placeholder="Ex: Reboque, Instalação elétrica, Troca de óleo..." autocomplete="off"
+                oninput="onServiceNameInput(this.value)" onblur="setTimeout(()=>closeSuggestions('serviceNameSuggestions'),200)">
+            <div id="serviceNameSuggestions" class="autocomplete-dropdown" style="display:none"></div>
         </div>
         <div class="service-rate-banner">
             <i class="fa-solid fa-circle-info"></i> Preencha os valores padrão. Na OS eles aparecem pré-preenchidos e podem ser editados.
@@ -1216,16 +1219,16 @@
         <div class="form-input-row">
             <div class="form-field">
                 <label class="form-label"><i class="fa-regular fa-clock" style="color:var(--accent);font-size:0.7rem"></i> Valor / Hora (R$)</label>
-                <input type="text" id="addServiceHourRate" class="form-input" placeholder="0,00" oninput="maskMoney(this);calcServicePreview()">
+                <input type="text" id="addServiceHourRate" class="form-input" placeholder="0,00" oninput="maskMoney(this);calcServicePreview();onServicePriceChange()">
             </div>
             <div class="form-field">
                 <label class="form-label"><i class="fa-solid fa-location-dot" style="color:var(--accent);font-size:0.7rem"></i> Valor de Saída (R$)</label>
-                <input type="text" id="addServiceDeparture" class="form-input" placeholder="0,00" oninput="maskMoney(this);calcServicePreview()">
+                <input type="text" id="addServiceDeparture" class="form-input" placeholder="0,00" oninput="maskMoney(this);calcServicePreview();onServicePriceChange()">
             </div>
         </div>
         <div class="form-field">
             <label class="form-label"><i class="fa-solid fa-plus-circle" style="color:var(--accent);font-size:0.7rem"></i> Adicional Padrão (R$)</label>
-            <input type="text" id="addServiceAdditional" class="form-input" placeholder="0,00 (opcional)" oninput="maskMoney(this);calcServicePreview()">
+            <input type="text" id="addServiceAdditional" class="form-input" placeholder="0,00 (opcional)" oninput="maskMoney(this);calcServicePreview();onServicePriceChange()">
         </div>
         <!-- Preview do cálculo -->
         <div class="service-calc-preview" id="serviceCalcPreview" style="display:none">
@@ -1233,6 +1236,23 @@
             <div class="scp-formula" id="scpFormula">—</div>
             <div class="scp-total" id="scpTotal">R$ 0,00</div>
         </div>
+
+        <!-- Painel de Inteligência de Preços da Região (Serviços) -->
+        <div id="servicePriceIntelPanel" class="section-card" style="display:none; margin: 4px 0 12px;">
+            <div class="section-card-title" style="margin-bottom: 12px;">
+                <span><i class="fa-solid fa-lightbulb" style="color:var(--accent)"></i> Numera Smart View</span>
+                <span id="servicePriceIntelLoading" class="price-intel-loading" style="display:none"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+            </div>
+            <div class="chart-toggle" style="margin-bottom: 12px; display:flex;">
+                <button class="chart-toggle-btn active" id="serviceIntelTabCity" onclick="switchIntelLevel('city', 'service')" style="flex:1">Sua Região</button>
+                <button class="chart-toggle-btn" id="serviceIntelTabState" onclick="switchIntelLevel('state', 'service')" style="flex:1">Estado</button>
+                <button class="chart-toggle-btn" id="serviceIntelTabNational" onclick="switchIntelLevel('national', 'service')" style="flex:1">Brasil</button>
+            </div>
+            <div id="servicePriceIntelBody">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+
         <div class="form-field">
             <label class="form-label">Descrição do Serviço (opcional)</label>
             <textarea id="addServiceDesc" class="form-textarea" rows="2" placeholder="Descreva o serviço, materiais inclusos, etc..."></textarea>
@@ -6979,6 +6999,7 @@ let brandSearchTimeout = null;
 let productNameSearchTimeout = null;
 let modelSearchTimeout = null;
 let priceIntelTimeout = null;
+let serviceNameSearchTimeout = null;
 
 function closeSuggestions(id) {
     const el = document.getElementById(id);
@@ -6997,6 +7018,22 @@ function onProductNameInput(val) {
     productNameSearchTimeout = setTimeout(() => searchGlobalProducts(val), 80);
     clearTimeout(priceIntelTimeout);
     priceIntelTimeout = setTimeout(() => loadPriceIntelligence(val), 600);
+}
+
+function onServiceNameInput(val) {
+    clearTimeout(serviceNameSearchTimeout);
+    if (val.trim().length < 1) { closeSuggestions('serviceNameSuggestions'); return; }
+    serviceNameSearchTimeout = setTimeout(() => searchGlobalServices(val), 80);
+    clearTimeout(priceIntelTimeout);
+    priceIntelTimeout = setTimeout(() => loadPriceIntelligence(val, 'service'), 600);
+}
+
+function onServicePriceChange() {
+    const name = document.getElementById('addServiceName')?.value.trim();
+    if (name && name.length >= 1) {
+        clearTimeout(priceIntelTimeout);
+        priceIntelTimeout = setTimeout(() => loadPriceIntelligence(name, 'service'), 600);
+    }
 }
 
 function onModelInput(val) {
@@ -7198,12 +7235,13 @@ async function loadPriceIntelligence(productName) {
 
         // Garante que a aba padrão ativa seja "Sua Região"
         currentIntelLevel = 'city';
+        const prefix = type === 'service' ? 'serviceIntelTab' : 'intelTab';
         ['city','state','national'].forEach(l => {
-            const btn = document.getElementById('intelTab' + l.charAt(0).toUpperCase() + l.slice(1));
+            const btn = document.getElementById(prefix + l.charAt(0).toUpperCase() + l.slice(1));
             if (btn) btn.classList.toggle('active', l === currentIntelLevel);
         });
 
-        renderPriceIntelligence();
+        renderPriceIntelligence(type);
 
     } catch(e) {
         body.innerHTML = `<div style="font-size:0.72rem;color:var(--danger,#f44336);padding:4px 0"><i class="fa-solid fa-triangle-exclamation"></i> Erro: ${e.message}</div>`;
@@ -7212,8 +7250,9 @@ async function loadPriceIntelligence(productName) {
     }
 }
 
-function renderPriceIntelligence() {
-    const body = document.getElementById('priceIntelBody');
+function renderPriceIntelligence(type = 'product') {
+    const bodyId = type === 'service' ? 'servicePriceIntelBody' : 'priceIntelBody';
+    const body = document.getElementById(bodyId);
     if (!body) return;
 
     if (!currentIntelLoc) return;
@@ -7555,10 +7594,13 @@ async function loadServicesList(catId) {
 function openAddServiceSheet() {
     document.getElementById('addServiceSheetTitle').textContent = 'Cadastrar Serviço';
     document.getElementById('editServiceId').value = '';
+    document.getElementById('editServiceOriginalName').value = '';
     ['addServiceName','addServiceDesc'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     ['addServiceHourRate','addServiceDeparture','addServiceAdditional'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     document.getElementById('newServiceCatField').style.display = 'none';
     document.getElementById('serviceCalcPreview').style.display = 'none';
+    const intelPanel = document.getElementById('servicePriceIntelPanel');
+    if (intelPanel) intelPanel.style.display = 'none';
     // Populate categories
     db.collection('groups').doc(currentGroupId).collection('categories').orderBy('name').get().then(snap => {
         const sel = document.getElementById('addServiceCat');
@@ -7582,6 +7624,7 @@ async function openServiceDetail(serviceId) {
         openAddServiceSheet();
         document.getElementById('addServiceSheetTitle').textContent = 'Editar Serviço';
         document.getElementById('editServiceId').value = serviceId;
+        document.getElementById('editServiceOriginalName').value = s.name || '';
         document.getElementById('addServiceName').value = s.name || '';
         document.getElementById('addServiceHourRate').value = s.hourRate ? s.hourRate.toFixed(2).replace('.',',') : '';
         document.getElementById('addServiceDeparture').value = s.departure ? s.departure.toFixed(2).replace('.',',') : '';
@@ -7589,6 +7632,7 @@ async function openServiceDetail(serviceId) {
         document.getElementById('addServiceDesc').value = s.description || '';
         document.getElementById('addServiceCat').value = s.categoryId || '';
         calcServicePreview();
+        if (s.name) loadPriceIntelligence(s.name, 'service');
     } catch(e) { showToast('Erro ao carregar serviço', 'error'); }
 }
 
@@ -7621,6 +7665,7 @@ async function saveService() {
     const additional = parseMoney(document.getElementById('addServiceAdditional').value);
     const desc = document.getElementById('addServiceDesc').value.trim();
     const editId = document.getElementById('editServiceId').value;
+    const originalName = document.getElementById('editServiceOriginalName')?.value.trim() || '';
 
     if (!name || !catId) { showToast('Nome e categoria são obrigatórios', 'error'); return; }
     setLoading('btnSaveService', true);
@@ -7646,22 +7691,35 @@ async function saveService() {
             costPrice: 0, unit: 'h',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
+        
+        let targetId = editId;
 
         if (editId) {
             await db.collection('groups').doc(currentGroupId).collection('products').doc(editId).update(serviceData);
             showToast('Serviço atualizado!', 'success');
+            
+            const nameChanged = originalName && originalName.toLowerCase() !== name.toLowerCase().trim();
+            if (nameChanged) {
+                await syncToGlobalDB(originalName, '', '', 0, 0, editId, null);
+            }
         } else {
             const groupDoc = await db.collection('groups').doc(currentGroupId).get();
             const counter = (groupDoc.data().productCounter || 0) + 1;
             await db.collection('groups').doc(currentGroupId).update({ productCounter: counter });
             const code = String(new Date().getFullYear()) + String(counter).padStart(6, '0');
-            await db.collection('groups').doc(currentGroupId).collection('products').add({
+            const prodRef = await db.collection('groups').doc(currentGroupId).collection('products').add({
                 ...serviceData, code, active: true, brand: '',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 createdBy: currentUser.uid
             });
+            targetId = prodRef.id;
+            await prodRef.update({ _docId: targetId });
             showToast('Serviço cadastrado!', 'success');
         }
+        
+        const currentDataForSync = { ...serviceData, id: targetId, active: true };
+        syncToGlobalDB(name, '', '', hourRate, 0, targetId, currentDataForSync);
+        
         closeSheet('sheetAddService');
         loadServicosTab();
     } catch(e) { showToast('Erro: ' + e.message, 'error'); }
