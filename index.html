@@ -6940,12 +6940,21 @@ function renderPriceIntelligence() {
         return `<div class="price-intel-row">
             <div class="price-intel-level">
                 <div style="color:var(--text-main);font-weight:600;font-size:0.9rem">${itemName}</div>
-                <div style="font-size:0.65rem; background:var(--card-bg); border:1px solid var(--card-border); padding:3px 8px; border-radius:12px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-store" style="margin-right:4px"></i>${lojas}</div>
+                <div style="font-size:0.65rem; background:var(--card-bg); border:1px solid var(--card-border); padding:4px 10px; border-radius:20px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-store" style="margin-right:4px"></i>${lojas}</div>
             </div>
             <div class="price-intel-stats">
-                <div class="pi-stat min"><span><i class="fa-solid fa-arrow-down"></i> Mín</span> <strong>${formatBRL(stats.min)}</strong></div>
-                <div class="pi-stat avg"><span><i class="fa-solid fa-bullseye"></i> Méd</span> <strong>${formatBRL(stats.avg)}</strong></div>
-                <div class="pi-stat max"><span><i class="fa-solid fa-arrow-up"></i> Máx</span> <strong>${formatBRL(stats.max)}</strong></div>
+                <div class="pi-stat avg">
+                    <span><i class="fa-solid fa-bullseye"></i> Preço Médio</span> 
+                    <strong>${formatBRL(stats.avg)}</strong>
+                </div>
+                <div class="pi-stat min">
+                    <span><i class="fa-solid fa-arrow-down"></i> Mínimo</span> 
+                    <strong>${formatBRL(stats.min)}</strong>
+                </div>
+                <div class="pi-stat max">
+                    <span><i class="fa-solid fa-arrow-up"></i> Máximo</span> 
+                    <strong>${formatBRL(stats.max)}</strong>
+                </div>
                 ${stats.m ? `<div class="pi-stat margin"><span><i class="fa-solid fa-percent"></i> Margem Média</span> <strong>${stats.m.toFixed(1)}%</strong></div>` : ''}
             </div>
         </div>`;
